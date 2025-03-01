@@ -1,6 +1,16 @@
 package com.example.diplom.model;
 
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+
+@Entity
+@DiscriminatorValue("DISH")
 public class Dish extends Product{
+
+    public Dish(){
+
+    }
 
     public Dish(String name, String description, double price) {
         super(name, description, price);
@@ -9,6 +19,7 @@ public class Dish extends Product{
 //    public Dish() {
 //
 //    }
+
 
     @Override
     public Dish clone() {

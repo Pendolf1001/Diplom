@@ -1,17 +1,31 @@
 package com.example.diplom.model;
 
+import jakarta.persistence.*;
 
+@Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "dtype", discriminatorType = DiscriminatorType.STRING)
+@Table(name = "PRODUCTS")
 public abstract class Product implements Prototype {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
     private String description;
     private double price;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
     private ProductStatus productStatus = ProductStatus.NOT_STARTED;
 
 //    public Product() {
 //
 //    }
+
+
+    public Product(){}
+
 
     public Product(String name, String description, double price) {
         this.name = name;
