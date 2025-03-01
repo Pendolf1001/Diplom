@@ -30,4 +30,14 @@ public class ProductRepositoryImpl implements ProductRepository {
     public List<Product> findAll() {
         return productJpaRepository.findAll();
     }
+
+    @Override
+    public void deleteById(Long id) {
+        productJpaRepository.deleteById(id);
+    }
+
+    @Override
+    public Product update(Product product) {
+        return productJpaRepository.save(product); // save() обновляет, если объект уже существует
+    }
 }

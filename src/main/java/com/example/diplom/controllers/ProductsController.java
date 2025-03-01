@@ -1,18 +1,15 @@
 package com.example.diplom.controllers;
 
 import com.example.diplom.cases.CreateProductUseCase;
-import com.example.diplom.model.Order;
 import com.example.diplom.model.Pizza;
 import com.example.diplom.model.Product;
-import com.example.diplom.repositories.OrderRepo;
-import com.example.diplom.repositories.PizzaRepo;
+import com.example.diplom.service.ProductService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @AllArgsConstructor
@@ -20,18 +17,35 @@ import java.util.Optional;
 public class ProductsController {
 
 
-    private final CreateProductUseCase createProductUseCase;
+    private final ProductService productService;
 
 
-    @GetMapping
-    public ResponseEntity<List<Pizza>> getAllPizzas(){
-        return new ResponseEntity<>(pizzaRepo.findAll(), HttpStatus.OK);
-    }
+
 
     @PostMapping
     public Product createProduct(@RequestBody Product product) {
-        return createProductUseCase.execute(product);
+        return productService.createProduct(product);
     }
 
+    @GetMapping("/{id}")
+    public Product getProduct(@PathVariable Long id) {
+        return productService.getProductById(id);
+    }
+
+    @GetMapping
+    public List<Product> getAllProducts() {
+        return productService.getAllProducts();
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteProduct(@PathVariable Long id) {
+        productService.deleteProduct(id);
+    }
+
+    @PutMapping("/{id}")
+    public Product updateProduct(@PathVariable Long id, @RequestBody Product product) {
+        product.setId(id); // Убедимся, что ID продукта совпадает с ID в пути
+        return productService.updateProduct(product);
+    }
 
 }
