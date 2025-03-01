@@ -15,16 +15,16 @@ import java.util.List;
 @RequestMapping("/orders")
 public class OrderController {
 
-    private final OrderRepo clientRepo;
+    private final OrderRepo orderRepo;
 
     @GetMapping
-    public ResponseEntity<List<Order>> getAllClients(){
-        return new ResponseEntity<>(clientRepo.findAll(), HttpStatus.OK);
+    public ResponseEntity<List<Order>> getAllOrders(){
+        return new ResponseEntity<>(orderRepo.findAll(), HttpStatus.OK);
     }
 
     @PostMapping
     public ResponseEntity<Order> createOrder(@RequestBody Order order){
-        return new  ResponseEntity<>(clientRepo.save(order),HttpStatus.CREATED);
+        return new  ResponseEntity<>(orderRepo.save(order),HttpStatus.CREATED);
     }
 
 

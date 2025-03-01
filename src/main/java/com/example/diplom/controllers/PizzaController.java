@@ -70,8 +70,17 @@ public class PizzaController {
         }else{
             return  ResponseEntity.notFound().build();
         }
+
+
+
     }
 
+
+    @GetMapping("/client/{orderId}")
+    public ResponseEntity<List<Pizza>> getPizzaByOrder(@PathVariable Long orderId){
+        return new ResponseEntity<>(pizzaRepo.findAllByOrderId(orderId), HttpStatus.OK);
+
+    }
 
 
 }
