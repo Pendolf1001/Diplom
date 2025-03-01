@@ -4,15 +4,11 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.sql.Time;
-
-import static com.example.diplom.model.ProgressStatus.NOT_STARTED;
-
 @Data
 @Entity
 @NoArgsConstructor
 @Table(name="pizzas")
-public class Pizza {
+public class Pizza extends Dish {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -25,18 +21,27 @@ public class Pizza {
 
     @Column( name="status",  nullable=false)
     @Enumerated(EnumType.STRING)
-    private ProgressStatus progressStatus;
+    private ProductStatus productStatus;
 
-
+    @Override
+    public String toString() {
+        return "Pizza{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", progressStatus=" + productStatus +
+                ", order=" + order +
+                ", description='" + getDescription() + '\'' +
+                ", price=" + getPrice() +
+                '}';
+    }
 
     @JoinColumn (name="order_id", nullable=true)
     @ManyToOne
-//    @JoinColumn(name="orderId")
+
     private Order order;
 
-    public Pizza(String name) {
-        this.name = name;
-        this.progressStatus=NOT_STARTED;
 
+    public Pizza(String name, String description, double price) {
+        super(name, description, price);
     }
 }

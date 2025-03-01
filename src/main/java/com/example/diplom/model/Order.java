@@ -1,41 +1,68 @@
 package com.example.diplom.model;
 
 
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
+import java.util.ArrayList;
+import java.util.List;
 
-import java.time.LocalDateTime;
-
-import static com.example.diplom.model.ProgressStatus.NOT_STARTED;
-
-@Data
-@Entity
-@NoArgsConstructor
-@Table(name="orders")
 public class Order {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    private List<Product> products = new ArrayList<>();
+    private OrderStatus status = OrderStatus.NEW;
 
-
-    @Column( name="name", nullable=false)
-    private String name;
-
-
-    @Column( name="status",  nullable=false)
-    @Enumerated(EnumType.STRING)
-    private ProgressStatus progressStatus;
-
-
-    @Column( name="created_at", nullable=false)
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    public Order(String name) {
-        this.name = name;
-        this.progressStatus=NOT_STARTED;
+    public Long getId() {
+        return id;
     }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public List<Product> getProducts() {
+        return products;
+    }
+
+    public void setProducts(List<Product> products) {
+        this.products = products;
+    }
+
+    public OrderStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(OrderStatus status) {
+        this.status = status;
+    }
+
+
+
+    public void addProduct(Product product) {
+        products.add(product);
+        updateOrderStatus();
+    }
+
+
+    private void updateOrderStatus() {
+        boolean allReady = products.stream().allMatch(p -> p.getProgressStatus() == ProductStatus.READY);
+        boolean anyInProgress = products.stream().anyMatch(p -> p.getProgressStatus() == ProductStatus.IN_PROGRESS);
+
+        if (allReady) {
+            status = OrderStatus.COMPLETED;
+        } else if (anyInProgress) {
+            status = OrderStatus.IN_PROGRESS;
+        } else {
+            status = OrderStatus.NEW;
+        }
+
+
+    }
+
+    public void updateProductStatus(Product product, ProductStatus status) {
+        product.setProductStatus(status);
+        updateOrderStatus();
+    }
+
+
+
+
 }

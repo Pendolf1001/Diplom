@@ -10,7 +10,9 @@ create table orders(
 create table pizzas(
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
+    discription VARCHAR(50) NOT NULL,
     status VARCHAR(50) NOT NULL,
+    price
     order_id INT
 );
 
