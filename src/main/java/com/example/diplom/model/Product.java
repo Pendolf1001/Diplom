@@ -1,7 +1,7 @@
 package com.example.diplom.model;
 
 
-abstract class Product implements Prototype {
+public abstract class Product implements Prototype {
 
     private Long id;
     private String name;
