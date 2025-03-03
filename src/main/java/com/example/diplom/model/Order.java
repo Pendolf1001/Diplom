@@ -22,14 +22,20 @@ public class Order {
             joinColumns = @JoinColumn(name = "order_id"),
             inverseJoinColumns = @JoinColumn(name="product_id")
     )
-    private List<Product> products = new ArrayList<>();
+    private List<Product> products;
 
     @Enumerated(EnumType.STRING)
     private OrderStatus status = OrderStatus.NEW;
 
+    public Order() {
+        this.products = new ArrayList<>();
+    }
+
+
     public Long getId() {
         return id;
     }
+
 
     public void setId(Long id) {
         this.id = id;
@@ -60,8 +66,8 @@ public class Order {
 
 
     private void updateOrderStatus() {
-        boolean allReady = products.stream().allMatch(p -> p.getProgressStatus() == ProductStatus.READY);
-        boolean anyInProgress = products.stream().anyMatch(p -> p.getProgressStatus() == ProductStatus.IN_PROGRESS);
+        boolean allReady = products.stream().allMatch(p -> p.getProductStatus() == ProductStatus.READY);
+        boolean anyInProgress = products.stream().anyMatch(p -> p.getProductStatus() == ProductStatus.IN_PROGRESS);
 
         if (allReady) {
             status = OrderStatus.COMPLETED;

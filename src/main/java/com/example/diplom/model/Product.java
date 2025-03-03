@@ -73,13 +73,8 @@ public abstract class Product implements Prototype {
         this.price = price;
     }
 
-    public ProductStatus getProgressStatus() {
-        return productStatus;
-    }
 
-    public void setProgressStatus(ProductStatus productStatus) {
-        this.productStatus = productStatus;
-    }
+
 
 
     public void  updateStatus( ProductStatus productStatus){

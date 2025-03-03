@@ -1,17 +1,18 @@
 package com.example.diplom.controllers;
 
 
-import com.example.diplom.cases.AddProductToOrderUseCase;
+//import com.example.diplom.cases.AddProductToOrderUseCase;
 import com.example.diplom.model.Order;
 
 import com.example.diplom.service.OrderService;
 import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+
 @AllArgsConstructor
 @RestController
 @RequestMapping("/orders")
@@ -20,28 +21,36 @@ class OrderController {
     private final OrderService orderService;
 
     @PostMapping
-    public Order createOrder(@RequestBody Order order) {
-        return orderService.createOrder(order);
+    public ResponseEntity<Order> createOrder(@RequestBody Order order) {
+        return  new  ResponseEntity<> (orderService.createOrder(order),HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")
-    public Order getOrder(@PathVariable Long id) {
-        return orderService.getOrderById(id);
+    public ResponseEntity<Order> getOrder(@PathVariable Long id) {
+        Order orderById;
+        try {
+            orderById = orderService.getOrderById(id);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Order());
+        }
+
+        return new ResponseEntity<>(orderById, HttpStatus.OK);
     }
 
     @GetMapping
-    public List<Order> getAllOrders() {
-        return orderService.getAllOrders();
+    public ResponseEntity<List<Order>> getAllOrders() {
+        return new ResponseEntity<>(orderService.getAllOrders(),HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteOrder(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
         orderService.deleteOrder(id);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping("/{id}")
-    public Order updateOrder(@PathVariable Long id, @RequestBody Order order) {
-        order.setId(id); // Убедимся, что ID заказа совпадает с ID в пути
-        return orderService.updateOrder(order);
+    public ResponseEntity<Order>  updateOrder(@PathVariable Long id, @RequestBody Order order) {
+
+        return new ResponseEntity<>(orderService.updateOrder(order), HttpStatus.OK);
     }
 }
