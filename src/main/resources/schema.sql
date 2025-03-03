@@ -22,7 +22,6 @@ CREATE TABLE IF NOT EXISTS products (
     description VARCHAR(255),
     price DOUBLE NOT NULL,
     status VARCHAR(50) NOT NULL,
-    product_type VARCHAR(50) NOT NULL,
     diameter INT, -- Новое поле для пицц
     dtype VARCHAR(50) NOT NULL
 );

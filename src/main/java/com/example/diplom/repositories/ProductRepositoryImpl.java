@@ -1,6 +1,7 @@
 package com.example.diplom.repositories;
 
 import com.example.diplom.model.Product;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -21,9 +22,10 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
-    public Product findById(Long id) {
-        return productJpaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Продукт не найден"));
+    public Optional<Product> findById(Long id) {
+        Optional<Product>  product= Optional.ofNullable(productJpaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Продукт не найден")));
+        return product;
     }
 
     @Override
@@ -39,5 +41,10 @@ public class ProductRepositoryImpl implements ProductRepository {
     @Override
     public Product update(Product product) {
         return productJpaRepository.save(product); // save() обновляет, если объект уже существует
+    }
+
+    @Override
+    public boolean existsById(Long id) {
+        return productJpaRepository.existsById(id);
     }
 }

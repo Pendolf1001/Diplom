@@ -17,5 +17,5 @@ public abstract class Dish extends Product {
     }
 
     @Override
-    public abstract Dish clone(); // Оставляем метод абстрактным
+    public abstract Dish clone();
 }

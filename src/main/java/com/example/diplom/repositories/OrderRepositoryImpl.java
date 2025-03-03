@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
+import java.util.Optional;
 
 
 @Repository
@@ -20,10 +21,12 @@ public class OrderRepositoryImpl implements OrderRepository{
     }
 
     @Override
-    public Order findById(Long id) {
-        return orderJpaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Заказ не найден"));
+    public Optional<Order> findById(Long id) {
+        return Optional.ofNullable(orderJpaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Заказ не найден")));
     }
+
+
 
     @Override
     public void deleteById(Long id) {
