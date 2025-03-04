@@ -49,6 +49,21 @@ public class MenuController {
         return new ResponseEntity<>(savedPizza, HttpStatus.CREATED);
     }
 
+    @PostMapping("/{menuId}/rolls")
+    public ResponseEntity<RollMenuItem> addRollsToMenu(
+            @PathVariable Long menuId,
+            @RequestBody RollMenuItem roll
+    ) {
+
+        RollMenuItem savedRoll;
+        try {
+            savedRoll = (RollMenuItem) menuService.addItemToMenu(menuId, roll);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new RollMenuItem());
+        }
+        return new ResponseEntity<>(savedRoll, HttpStatus.CREATED);
+    }
+
 
 
     @GetMapping("/{menuId}/items")

@@ -100,7 +100,16 @@ public class OrderService {
             pizza.setPrice(pizzaItem.getPrice());
             pizza.setDiameter(pizzaItem.getDiameter());
             return pizza;
+        }else if (item instanceof RollMenuItem) {
+            RollMenuItem rollItem = (RollMenuItem) item;
+            RollDish roll = new RollDish();
+            roll.setName(rollItem.getName());
+            roll.setDescription(rollItem.getDescription());
+            roll.setPrice(rollItem.getPrice());
+            roll.setPieceCount(rollItem.getPieceCount()); // Только pieceCount
+            return roll;
         }
+
         // Аналогично для других типов
         throw new IllegalArgumentException("Тип продукта не поддерживается");
     }

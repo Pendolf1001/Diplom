@@ -9,11 +9,13 @@ import org.springframework.context.annotation.Bean;
 @AllArgsConstructor
 @Data
 public class ProductDTO {
-    private Long id;
-    private String name;
-    private String description;
-    private double price;
-    private ProductStatus productStatus;
-    private int diameter;
-    private String dtype;
+    public Long id;
+    public String name;
+    public String description;
+    public double price;
+    public ProductStatus productStatus;
+    public int diameter;
+    public int pieceCount;
+    public String dtype;
+
 }

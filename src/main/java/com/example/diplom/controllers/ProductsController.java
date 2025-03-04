@@ -1,10 +1,7 @@
 package com.example.diplom.controllers;
 
 import com.example.diplom.dto.ProductDTO;
-import com.example.diplom.model.Order;
-import com.example.diplom.model.Pizza;
-import com.example.diplom.model.Product;
-import com.example.diplom.model.Prototype;
+import com.example.diplom.model.*;
 import com.example.diplom.service.ProductService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -28,6 +25,8 @@ public class ProductsController {
         Product product;
         if ("PIZZA".equals(productDTO.getDtype())) {
             product = new Pizza(productDTO.getName(), productDTO.getDescription(), productDTO.getPrice(), productDTO.getDiameter());
+        } else if ("ROLL".equals(productDTO.getDtype())) {
+            product = new RollDish(productDTO.getName(), productDTO.getDescription(), productDTO.getPrice(), productDTO.getPieceCount());
         } else {
             throw new IllegalArgumentException("Неизвестный тип продукта");
         }
