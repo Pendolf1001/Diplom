@@ -52,20 +52,27 @@ class OrderController {
     @PutMapping("/{id}")
     public ResponseEntity<Order>  updateOrder(@PathVariable Long id, @RequestBody Order order) {
 
-        return new ResponseEntity<>(orderService.updateOrder(order), HttpStatus.OK);
+
+        try {
+            return new ResponseEntity<>(orderService.updateOrder(order), HttpStatus.OK);
+        } catch (RuntimeException e) {
+            log.warn("Заказ с таким Id не найден");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Order());
+        }
     }
 
-    @PostMapping("/{orderId}/products/{productId}")
-    public ResponseEntity<Order> addProductToOrder(
+    @PostMapping("/{orderId}/menu-items/{menuItemId}")
+    public ResponseEntity<Order> addProductFromMenu(
             @PathVariable Long orderId,
-            @PathVariable Long productId
+            @PathVariable Long menuItemId
     ) {
+
         try {
-            Order updatedOrder = orderService.addProductToOrder(orderId, productId);
+            Order updatedOrder = orderService.addProductFromMenu(orderId, menuItemId);
             return new ResponseEntity<>(updatedOrder, HttpStatus.OK);
         } catch (RuntimeException e) {
             log.warn("Ошибка при добавлении продукта в заказ: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Order());
         }
     }
 }

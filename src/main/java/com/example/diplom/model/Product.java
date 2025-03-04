@@ -19,13 +19,25 @@ public abstract class Product implements Prototype {
     @Column(name = "status")
     private ProductStatus productStatus = ProductStatus.NOT_STARTED;
 
-//    public Product() {
-//
-//    }
+    @Column(name = "menu_id")
+    private Long menuId;
 
+    public Long getMenuId() {
+        return menuId;
+    }
+
+    public void setMenuId(Long menuId) {
+        this.menuId = menuId;
+    }
 
     public Product(){}
 
+    public Product(String name, String description, double price, Long menuId) {
+        this.name = name;
+        this.description = description;
+        this.price = price;
+        this.menuId = menuId;
+    }
 
     public Product(String name, String description, double price) {
         this.name = name;

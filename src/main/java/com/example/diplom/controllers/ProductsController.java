@@ -88,15 +88,15 @@ public class ProductsController {
             productById.setProductStatus(productDTO.getProductStatus());
         }
 
-        // Если продукт является пиццей, обновляем диаметр
+
         if (productById instanceof Pizza && productDTO.getDiameter() != 0) {
             ((Pizza) productById).setDiameter(productDTO.getDiameter());
         }
 
-        // Сохраняем обновленный продукт
+
         Product updatedProduct = productService.updateProduct(productById);
 
-        // Возвращаем обновленный продукт
+
         return new ResponseEntity<>(updatedProduct, HttpStatus.OK);
 
 
