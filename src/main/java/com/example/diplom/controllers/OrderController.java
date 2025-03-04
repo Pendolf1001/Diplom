@@ -2,6 +2,7 @@ package com.example.diplom.controllers;
 
 
 //import com.example.diplom.cases.AddProductToOrderUseCase;
+import com.example.diplom.dto.OrderResponse;
 import com.example.diplom.model.Order;
 
 import com.example.diplom.service.OrderService;
@@ -26,21 +27,27 @@ class OrderController {
         return  new  ResponseEntity<> (orderService.createOrder(order),HttpStatus.CREATED);
     }
 
+
+
+
+
     @GetMapping("/{id}")
-    public ResponseEntity<Order> getOrder(@PathVariable Long id) {
+    public ResponseEntity<OrderResponse> getOrder(@PathVariable Long id) {
         Order orderById;
         try {
             orderById = orderService.getOrderById(id);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Order());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new OrderResponse());
         }
+        double total = orderService.calculateOrderTotal(id);
+        OrderResponse response = orderService.orderToOrderResponse(orderById, total);
 
-        return new ResponseEntity<>(orderById, HttpStatus.OK);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping
-    public ResponseEntity<List<Order>> getAllOrders() {
-        return new ResponseEntity<>(orderService.getAllOrders(),HttpStatus.OK);
+    public ResponseEntity<List<OrderResponse>> getAllOrders() {
+        return new ResponseEntity<>(orderService.getAllOrdersWithTotals(),HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")

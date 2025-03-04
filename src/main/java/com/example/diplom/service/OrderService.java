@@ -1,5 +1,6 @@
 package com.example.diplom.service;
 
+import com.example.diplom.dto.OrderResponse;
 import com.example.diplom.model.*;
 import com.example.diplom.repositories.MenuItemRepository;
 import com.example.diplom.repositories.OrderRepository;
@@ -7,11 +8,10 @@ import com.example.diplom.repositories.ProductRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @AllArgsConstructor
@@ -51,22 +51,6 @@ public class OrderService {
         return orderRepository.update(order);
     }
 
-//    public Order addProductToOrder(Long orderId, Long productId) {
-//        Order order = orderRepository.findById(orderId)
-//                .orElseThrow(() -> new RuntimeException("Order not found"));
-//
-//       Product findProduct=productRepository.findById(productId)
-//               .orElseThrow(() -> new RuntimeException("Product not found"));
-//
-//
-//        Product clonedProduct= (Product) findProduct.clone();
-//
-//        clonedProduct.setId(null);
-//        Product savedClone = productRepository.save(clonedProduct);
-//
-//        order.addProduct(savedClone);
-//        return orderRepository.update(order);
-//    }
 
 
     @Transactional
@@ -116,5 +100,39 @@ public class OrderService {
 
 
 
+    /**
+     * Подсчитывает сумму заказа.
+     *
+     * @param orderId ID заказа.
+     * @return Сумма заказа.
+     */
+    public double calculateOrderTotal(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Заказ не найден"));
 
+        return order.getProducts().stream()
+                .mapToDouble(Product::getPrice)
+                .sum();
+    }
+
+
+    public OrderResponse orderToOrderResponse(Order orderById, double total) {
+
+        OrderResponse response = new OrderResponse();
+        response.setId(orderById.getId());
+        response.setStatus(orderById.getStatus());
+        response.setProducts(orderById.getProducts());
+        response.setTotal(total);
+        return response;
+    }
+
+    public List<OrderResponse> getAllOrdersWithTotals() {
+        List<Order> orders=orderRepository.findAll();
+        return orders.stream()
+                .map(order -> {
+                    double total = calculateOrderTotal(order.getId());
+                    return orderToOrderResponse(order, total);
+                })
+                .collect(Collectors.toList());
+    }
 }
