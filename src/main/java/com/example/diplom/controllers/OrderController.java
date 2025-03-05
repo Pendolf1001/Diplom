@@ -10,7 +10,9 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
@@ -81,5 +83,28 @@ class OrderController {
             log.warn("Ошибка при добавлении продукта в заказ: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Order());
         }
+    }
+
+
+    @GetMapping("/view")
+    public String viewOrders(Model model) {
+        model.addAttribute("orders", orderService.getAllOrdersWithTotals());
+        return "orders"; // Шаблон orders.html
+    }
+
+    @PostMapping("/add")
+    public String addToOrder(
+            @RequestParam Long menuItemId,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            // Здесь можно добавить логику для текущего заказа пользователя
+            Order order = orderService.createOrder(new Order()); // Создаем новый заказ для примера
+            orderService.addProductFromMenu(order.getId(), menuItemId);
+            redirectAttributes.addFlashAttribute("success", "Блюдо добавлено в заказ!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка: " + e.getMessage());
+        }
+        return "redirect:/menu";
     }
 }

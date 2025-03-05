@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -44,5 +45,10 @@ public class MenuService {
         Menu menu = menuRepository.findById(menuId)
                 .orElseThrow(() -> new RuntimeException("Меню не найдено"));
         return menu;
+    }
+
+    public Optional<MenuItem> getMenuItemById(Long menuItemId) {
+       return menuItemRepository.findById(menuItemId);
+
     }
 }
