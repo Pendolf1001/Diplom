@@ -13,13 +13,29 @@
     <title>Главная страница</title>
 </head>
 <body class="bg-light">
+
 <div class="container mt-5">
     <div class="card shadow">
-        <div class="card-body text-center">
-            <h1 class="text-primary mb-4" th:text="${message}"></h1>
-            <a href="/menu" class="btn btn-success btn-lg">
-                Посмотреть меню →
-            </a>
+        <div class="card-body">
+            <h1 class="text-center mb-4 text-primary" th:text="${message}"></h1>
+
+            <!-- Список меню -->
+            <div class="list-group">
+                <a th:each="menu : ${menus}"
+                   th:href="@{/menu(mid=${menu.id})}"
+                   class="list-group-item list-group-item-action">
+                    <h5 th:text="${menu.name}"></h5>
+                    <p class="text-muted" th:text="${menu.description}"></p>
+                    <small class="text-muted" th:text="${menu.address}"></small>
+                </a>
+            </div>
+
+            <!-- Ссылка на страницу меню -->
+            <div class="text-center mt-4">
+                <a href="/menu" class="btn btn-outline-primary">
+                    Посмотреть меню →-->
+                </a>
+            </div>
         </div>
     </div>
 </div>

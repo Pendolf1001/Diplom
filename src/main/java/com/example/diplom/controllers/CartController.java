@@ -16,6 +16,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -42,22 +43,33 @@ public class CartController {
     // Добавление блюда в корзину
     @PostMapping("/add")
     public String addToCart(@RequestParam Long menuItemId, HttpSession session) {
+        Long menuId = (Long) session.getAttribute("currentMenuId");
+        // Добавляем товар в корзину
+        List<MenuItem> cart = Optional.ofNullable((List<MenuItem>) session.getAttribute("cart"))
+                .orElse(new ArrayList<>());
         MenuItem menuItem = menuService.getMenuItemById(menuItemId)
                 .orElseThrow(() -> new RuntimeException("Блюдо не найдено"));
-        List<MenuItem> cart = getCart(session);
         cart.add(menuItem);
         session.setAttribute("cart", cart);
-        return "redirect:/menu#";
+
+        // Возвращаемся на страницу меню с текущим menuId
+        return "redirect:/menu?mid=" + menuId;
     }
 
     // Удаление блюда из корзины
 
     @PostMapping("/remove")
     public String removeFromCart(@RequestParam Long menuItemId, HttpSession session) {
+        // Получаем menuId из сессии
+        Long menuId = (Long) session.getAttribute("currentMenuId");
+
+        // Удаляем товар из корзины
         List<MenuItem> cart = getCart(session);
         cart.removeIf(item -> item.getId().equals(menuItemId));
         session.setAttribute("cart", cart);
-        return "redirect:/menu#";
+
+        // Возвращаемся на страницу меню с текущим menuId
+        return "redirect:/menu?mid=" + menuId;
     }
 
     // Оформление заказа
