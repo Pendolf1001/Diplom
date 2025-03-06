@@ -36,11 +36,7 @@ public class MainController {
         return "index"; // Имя шаблона без расширения .html
     }
 
-//    @GetMapping("/menu")
-//    public String menu(Model model) {
-//        model.addAttribute("menuItems",  menuService.getMenuItems(1L));
-//        return "menu"; // Имя шаблона без расширения .html
-//    }
+
     @GetMapping("/menu")
     public String menu(@RequestParam(required = false) Long mid, HttpSession session, Model model) {
         // Если menuId не указан, используем значение из сессии

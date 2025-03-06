@@ -82,6 +82,9 @@ INSERT INTO menu_items (name, description, price, diameter, piece_count, dtype, 
 ('Унаги', 'Ролл с угрем и огурцом', 19.99, NULL, 8, 'ROLL', 1);
 
 
-
+INSERT INTO users (username, password, role) VALUES
+('client1', '{noop}clientpass', 'CLIENT'),
+('staff1', '{noop}staffpass', 'STAFF'),
+('admin1', '{noop}adminpass', 'ADMIN');
 
 
