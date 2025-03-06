@@ -32,8 +32,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/","/menu/**", "/products/**", "/cart/add", "/cart/remove", "/cart/checkout").permitAll()
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/api/menu/**", "/cart/all").hasAnyAuthority("CLIENT", "ADMIN")
-                        .requestMatchers("/api/orders/**").hasAnyAuthority("STAFF", "ADMIN")
+                        .requestMatchers("/api/menu/**").hasAnyAuthority("CLIENT", "ADMIN")
+                        .requestMatchers("/api/orders/**", "/cart/all").hasAnyAuthority("STAFF", "ADMIN")
                         .requestMatchers("/admin/**").hasAuthority("ADMIN")
                         .anyRequest().authenticated()
                 )
