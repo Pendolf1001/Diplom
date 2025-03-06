@@ -80,3 +80,8 @@ INSERT INTO menu_items (name, description, price, diameter, piece_count, dtype, 
 ('Сакура', 'Ролл с крабом, огурцом и икрой', 18.99, NULL, 6, 'ROLL', 1),
 ('Ясай', 'Вегетарианский ролл с авокадо и огурцом', 11.99, NULL, 6, 'ROLL', 1),
 ('Унаги', 'Ролл с угрем и огурцом', 19.99, NULL, 8, 'ROLL', 1);
+
+
+
+
+

@@ -15,4 +15,6 @@ public class OrderResponse {
     private OrderStatus status;
     private List<Product> products;
     private double total;
+    private String restaurantName;
+    private String restaurantAddress;
 }

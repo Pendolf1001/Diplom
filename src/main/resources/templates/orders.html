@@ -27,6 +27,11 @@
                             <span class="badge bg-secondary" th:text="${order.status}"></span>
                         </h5>
                         <p class="card-text">
+                            <strong>Ресторан:</strong>
+                            <span th:text="${order.restaurantName}"></span>
+                            (<span th:text="${order.restaurantAddress}"></span>)
+                        </p>
+                        <p class="card-text">
                             <strong>Сумма:</strong>
                             <span th:text="${order.total}"></span> ₽
                         </p>
@@ -34,7 +39,8 @@
                             <li class="list-group-item" th:each="product : ${order.products}">
                                 <span th:text="${product.name}"></span> -
                                 <span th:text="${product.description}"></span> -
-                                <span th:text="${product.price}"></span> ₽
+<!--                                <span th:text="${product.price}"></span> ₽-->
+                                <span th:text="${#numbers.formatDecimal(product.price, 1, 2)}"></span> ₽
                             </li>
                         </ul>
                     </div>

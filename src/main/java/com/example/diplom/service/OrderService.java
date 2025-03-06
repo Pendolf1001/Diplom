@@ -22,6 +22,7 @@ public class OrderService {
     private final ProductRepository productRepository;
 
     private final MenuItemRepository menuItemRepository;
+    private final MenuService menuService;
 
 //    public OrderService(OrderRepository orderRepository) {
 //        this.orderRepository = orderRepository;
@@ -83,6 +84,7 @@ public class OrderService {
             pizza.setDescription(pizzaItem.getDescription());
             pizza.setPrice(pizzaItem.getPrice());
             pizza.setDiameter(pizzaItem.getDiameter());
+            pizza.setMenuId(item.getMenu().getId());
             return pizza;
         }else if (item instanceof RollMenuItem) {
             RollMenuItem rollItem = (RollMenuItem) item;
@@ -91,6 +93,7 @@ public class OrderService {
             roll.setDescription(rollItem.getDescription());
             roll.setPrice(rollItem.getPrice());
             roll.setPieceCount(rollItem.getPieceCount()); // Только pieceCount
+            roll.setMenuId(item.getMenu().getId());
             return roll;
         }
 
@@ -131,7 +134,31 @@ public class OrderService {
         return orders.stream()
                 .map(order -> {
                     double total = calculateOrderTotal(order.getId());
-                    return orderToOrderResponse(order, total);
+                    OrderResponse response = orderToOrderResponse(order, total);
+
+
+                    // Проверяем, есть ли продукты в заказе
+                    if (!order.getProducts().isEmpty()) {
+                        Product firstProduct = order.getProducts().get(0);
+                        // Проверяем, что menuId не null
+                        if (firstProduct.getMenuId() != null) {
+                            try {
+                                Menu menu = menuService.getMenuById(firstProduct.getMenuId());
+                                response.setRestaurantName(menu.getName());
+                                response.setRestaurantAddress(menu.getAddress());
+                            } catch (RuntimeException e) {
+                                // Логируем ошибку, если меню не найдено
+                                log.error("Меню с ID {} не найдено", firstProduct.getMenuId());
+                                response.setRestaurantName("Неизвестный ресторан");
+                                response.setRestaurantAddress("Адрес не указан");
+                            }
+                        } else {
+                            log.warn("Продукт {} не имеет menuId", firstProduct.getId());
+                            response.setRestaurantName("Неизвестный ресторан");
+                            response.setRestaurantAddress("Адрес не указан");
+                        }
+                    }
+                    return response;
                 })
                 .collect(Collectors.toList());
     }

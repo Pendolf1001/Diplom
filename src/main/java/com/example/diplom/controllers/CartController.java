@@ -112,17 +112,37 @@ public class CartController {
         return cart.stream().mapToDouble(MenuItem::getPrice).sum();
     }
 
+
     private List<Product> convertMenuItemsToProducts(List<MenuItem> menuItems) {
         return menuItems.stream()
                 .map(item -> {
+                    Product product;
                     if (item instanceof PizzaMenuItem) {
                         PizzaMenuItem pizzaItem = (PizzaMenuItem) item;
-                        return new Pizza(pizzaItem.getName(), pizzaItem.getDescription(), pizzaItem.getPrice(), pizzaItem.getDiameter());
+                        product = new Pizza(
+                                pizzaItem.getName(),
+                                pizzaItem.getDescription(),
+                                pizzaItem.getPrice(),
+                                pizzaItem.getDiameter()
+                        );
                     } else if (item instanceof RollMenuItem) {
                         RollMenuItem rollItem = (RollMenuItem) item;
-                        return new RollDish(rollItem.getName(), rollItem.getDescription(), rollItem.getPrice(), rollItem.getPieceCount());
+                        product = new RollDish(
+                                rollItem.getName(),
+                                rollItem.getDescription(),
+                                rollItem.getPrice(),
+                                rollItem.getPieceCount()
+                        );
+                    } else {
+                        throw new IllegalArgumentException("Неподдерживаемый тип блюда");
                     }
-                    throw new IllegalArgumentException("Неподдерживаемый тип блюда");
+
+                    // Проверяем, что menuItem связан с Menu
+                    if (item.getMenu() == null) {
+                        throw new IllegalStateException("MenuItem не имеет связанного меню");
+                    }
+                    product.setMenuId(item.getMenu().getId());
+                    return product;
                 })
                 .collect(Collectors.toList());
     }
