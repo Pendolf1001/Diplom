@@ -82,6 +82,19 @@ INSERT INTO menu_items (name, description, price, diameter, piece_count, dtype, 
 ('Унаги', 'Ролл с угрем и огурцом', 19.99, NULL, 8, 'ROLL', 1);
 
 
+INSERT INTO roles (name) VALUES
+('CLIENT'),
+('STAFF'),
+('ADMIN');
 
+INSERT INTO users (username, password) VALUES
+('client', '$2a$10$evuEaL2E6QbMD8x3o1Bt0OGYOqoP936TI8juV5I4obiunO94HVuly'), -- пароль везде password
+('staff', '$2a$10$evuEaL2E6QbMD8x3o1Bt0OGYOqoP936TI8juV5I4obiunO94HVuly'),
+('admin', '$2a$10$evuEaL2E6QbMD8x3o1Bt0OGYOqoP936TI8juV5I4obiunO94HVuly');
+
+INSERT INTO users_roles (user_id, role_id) VALUES
+(1, 1),
+(2, 2),
+(3, 3);
 
 

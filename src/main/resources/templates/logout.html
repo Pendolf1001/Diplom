@@ -1,0 +1,5 @@
+<!-- В вашем HTML-шаблоне -->
+<form action="/logout" method="post" xmlns:th="http://www.w3.org/1999/xhtml">
+    <input type="submit" value="Выйти">
+    <input type="hidden" name="_csrf" th:value="${_csrf.token}"> <!-- Если CSRF включён -->
+</form>
