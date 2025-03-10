@@ -8,7 +8,24 @@
     <title>Меню</title>
 </head>
 <body class="bg-light">
-
+<!-- Блок авторизации -->
+<div class="auth-section" style="position: absolute; top: 20px; left: 20px; z-index: 1000;">
+        <div th:if="${#authorization.expression('isAuthenticated()')}">
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    Выйти ([[${#authentication.principal.username}]])
+                </button>
+            </form>
+        </div>
+        <div th:unless="${#authorization.expression('isAuthenticated()')}">
+            <form th:action="@{/login}" method="post" class="d-flex gap-2">
+                <input type="text" name="username" placeholder="Логин" class="form-control form-control-sm">
+                <input type="password" name="password" placeholder="Пароль" class="form-control form-control-sm">
+                <button type="submit" class="btn btn-primary btn-sm">Войти</button>
+            </form>
+            <div th:if="${param.error}" class="text-danger mt-1">Ошибка авторизации!</div>
+        </div>
+</div>
 <!-- Иконка корзины -->
 <div class="cart-icon-wrapper">
     <button class="btn btn-primary cart-icon" onclick="toggleCart()">

@@ -1,0 +1,3351 @@
+﻿
+================================================================================
+Файл: D:\обучение\Diplom\diplom\.mvn\wrapper\maven-wrapper.properties
+================================================================================
+
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+wrapperVersion=3.3.2
+distributionType=only-script
+distributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.9/apache-maven-3.9.9-bin.zip
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\config\SecurityConfig.java
+================================================================================
+
+package com.example.diplom.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeHttpRequests(auth -> auth
+
+                        .requestMatchers("/css/**", "/js/**", "/login","/", "/logout","/menu", "/cart/add", "/cart/remove", "/cart/checkout")
+                        .permitAll()
+                        .requestMatchers("/cart/all")
+                        .hasAnyRole("STAFF", "ADMIN")
+                        .anyRequest()
+                        .hasRole("ADMIN")
+
+
+                )
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        .successHandler(new SavedRequestAwareAuthenticationSuccessHandler())
+                        .permitAll()
+                )
+                .logout(logout -> logout
+                        .logoutUrl("/logout") // URL РґР»СЏ РІС‹С…РѕРґР° (POST-Р·Р°РїСЂРѕСЃ)
+                        .logoutSuccessUrl("/") // РљСѓРґР° РїРµСЂРµРЅР°РїСЂР°РІРёС‚СЊ РїРѕСЃР»Рµ logout
+                        .invalidateHttpSession(true) // РЈРЅРёС‡С‚РѕР¶РёС‚СЊ СЃРµСЃСЃРёСЋ
+                        .deleteCookies("JSESSIONID") // РЈРґР°Р»РёС‚СЊ РєСѓРєРё
+                        .permitAll()
+                )
+                .exceptionHandling(handling -> handling
+                        .accessDeniedPage("/login?error=access_denied") // Р РµРґРёСЂРµРєС‚ РЅР° Р»РѕРіРёРЅ СЃ РїР°СЂР°РјРµС‚СЂРѕРј РѕС€РёР±РєРё
+                );
+
+        return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\controllers\CartController.java
+================================================================================
+
+package com.example.diplom.controllers;
+
+import com.example.diplom.model.*;
+import com.example.diplom.service.MenuService;
+import com.example.diplom.service.OrderService;
+import jakarta.servlet.http.HttpSession;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Slf4j
+@AllArgsConstructor
+@Controller
+@RequestMapping("/cart")
+public class CartController {
+
+    private final OrderService orderService;
+    private final MenuService menuService;
+
+    // РљРѕСЂР·РёРЅР° (С…СЂР°РЅРёС‚СЃСЏ РІ СЃРµСЃСЃРёРё)
+    @GetMapping
+    public String viewCart(HttpSession session, Model model) {
+        List<MenuItem> cart = getCart(session);
+        double total = calculateTotal(cart); // Р’С‹С‡РёСЃР»СЏРµРј РѕР±С‰СѓСЋ СЃСѓРјРјСѓ
+
+        System.out.println(total);
+        model.addAttribute("cart", cart);
+        model.addAttribute("total", total); // РџРµСЂРµРґР°РµРј РѕР±С‰СѓСЋ СЃСѓРјРјСѓ РІ РјРѕРґРµР»СЊ
+        return "cart";
+    }
+
+    // Р”РѕР±Р°РІР»РµРЅРёРµ Р±Р»СЋРґР° РІ РєРѕСЂР·РёРЅСѓ
+    @PostMapping("/add")
+    public String addToCart(@RequestParam Long menuItemId, HttpSession session) {
+        Long menuId = (Long) session.getAttribute("currentMenuId");
+        // Р”РѕР±Р°РІР»СЏРµРј С‚РѕРІР°СЂ РІ РєРѕСЂР·РёРЅСѓ
+        List<MenuItem> cart = Optional.ofNullable((List<MenuItem>) session.getAttribute("cart"))
+                .orElse(new ArrayList<>());
+        MenuItem menuItem = menuService.getMenuItemById(menuItemId)
+                .orElseThrow(() -> new RuntimeException("Р‘Р»СЋРґРѕ РЅРµ РЅР°Р№РґРµРЅРѕ"));
+        cart.add(menuItem);
+        session.setAttribute("cart", cart);
+
+        // Р’РѕР·РІСЂР°С‰Р°РµРјСЃСЏ РЅР° СЃС‚СЂР°РЅРёС†Сѓ РјРµРЅСЋ СЃ С‚РµРєСѓС‰РёРј menuId
+        return "redirect:/menu?mid=" + menuId;
+    }
+
+    // РЈРґР°Р»РµРЅРёРµ Р±Р»СЋРґР° РёР· РєРѕСЂР·РёРЅС‹
+
+    @PostMapping("/remove")
+    public String removeFromCart(@RequestParam Long menuItemId, HttpSession session) {
+        // РџРѕР»СѓС‡Р°РµРј menuId РёР· СЃРµСЃСЃРёРё
+        Long menuId = (Long) session.getAttribute("currentMenuId");
+
+        // РЈРґР°Р»СЏРµРј С‚РѕРІР°СЂ РёР· РєРѕСЂР·РёРЅС‹
+        List<MenuItem> cart = getCart(session);
+        cart.removeIf(item -> item.getId().equals(menuItemId));
+        session.setAttribute("cart", cart);
+
+        // Р’РѕР·РІСЂР°С‰Р°РµРјСЃСЏ РЅР° СЃС‚СЂР°РЅРёС†Сѓ РјРµРЅСЋ СЃ С‚РµРєСѓС‰РёРј menuId
+        return "redirect:/menu?mid=" + menuId;
+    }
+
+    // РћС„РѕСЂРјР»РµРЅРёРµ Р·Р°РєР°Р·Р°
+    @PostMapping("/checkout")
+    public String checkout(HttpSession session, RedirectAttributes redirectAttributes) {
+        List<MenuItem> cart = getCart(session);
+        if (cart.isEmpty()) {
+            redirectAttributes.addFlashAttribute("error", "РљРѕСЂР·РёРЅР° РїСѓСЃС‚Р°!");
+            return "redirect:/menu";
+        }
+
+        Order order = new Order();
+        order.setStatus(OrderStatus.NEW);
+        order.setProducts(convertMenuItemsToProducts(cart));
+        orderService.createOrder(order);
+
+        session.removeAttribute("cart"); // РћС‡РёС‰Р°РµРј РєРѕСЂР·РёРЅСѓ
+        redirectAttributes.addFlashAttribute("success", "Р—Р°РєР°Р· СѓСЃРїРµС€РЅРѕ РѕС„РѕСЂРјР»РµРЅ!");
+        return "redirect:/menu"; // Р’РѕР·РІСЂР°С‰Р°РµРјСЃСЏ РЅР° СЃС‚СЂР°РЅРёС†Сѓ РјРµРЅСЋ
+    }
+
+    // РџСЂРѕСЃРјРѕС‚СЂ РІСЃРµС… Р·Р°РєР°Р·РѕРІ (РґР»СЏ СЂР°Р±РѕС‚РЅРёРєР°)
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('STAFF') or hasRole('ADMIN')")
+    public String viewAllOrders(Model model) {
+        model.addAttribute("orders", orderService.getAllOrdersWithTotals());
+        return "orders";
+    }
+
+    // Р’СЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Рµ РјРµС‚РѕРґС‹
+    private List<MenuItem> getCart(HttpSession session) {
+        List<MenuItem> cart = (List<MenuItem>) session.getAttribute("cart");
+        if (cart == null) {
+            cart = new ArrayList<>();
+            session.setAttribute("cart", cart);
+        }
+        return cart;
+    }
+
+    private double calculateTotal(List<MenuItem> cart) {
+        return cart.stream().mapToDouble(MenuItem::getPrice).sum();
+    }
+
+
+    private List<Product> convertMenuItemsToProducts(List<MenuItem> menuItems) {
+        return menuItems.stream()
+                .map(item -> {
+                    Product product;
+                    if (item instanceof PizzaMenuItem) {
+                        PizzaMenuItem pizzaItem = (PizzaMenuItem) item;
+                        product = new Pizza(
+                                pizzaItem.getName(),
+                                pizzaItem.getDescription(),
+                                pizzaItem.getPrice(),
+                                pizzaItem.getDiameter()
+                        );
+                    } else if (item instanceof RollMenuItem) {
+                        RollMenuItem rollItem = (RollMenuItem) item;
+                        product = new RollDish(
+                                rollItem.getName(),
+                                rollItem.getDescription(),
+                                rollItem.getPrice(),
+                                rollItem.getPieceCount()
+                        );
+                    } else {
+                        throw new IllegalArgumentException("РќРµРїРѕРґРґРµСЂР¶РёРІР°РµРјС‹Р№ С‚РёРї Р±Р»СЋРґР°");
+                    }
+
+                    // РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ menuItem СЃРІСЏР·Р°РЅ СЃ Menu
+                    if (item.getMenu() == null) {
+                        throw new IllegalStateException("MenuItem РЅРµ РёРјРµРµС‚ СЃРІСЏР·Р°РЅРЅРѕРіРѕ РјРµРЅСЋ");
+                    }
+                    product.setMenuId(item.getMenu().getId());
+                    return product;
+                })
+                .collect(Collectors.toList());
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\controllers\LoginController.java
+================================================================================
+
+package com.example.diplom.controllers;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+
+@Controller
+public class LoginController {
+
+    @GetMapping("/login")
+    public String login() {
+        return "login";
+    }
+
+    @GetMapping("/logout")
+    public String logout() {
+        return "logout";
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\controllers\MainController.java
+================================================================================
+
+package com.example.diplom.controllers;
+
+
+import com.example.diplom.model.Menu;
+import com.example.diplom.model.MenuItem;
+import com.example.diplom.service.MenuService;
+import com.example.diplom.service.OrderService;
+import com.example.diplom.service.ProductService;
+import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.ArrayList;
+import java.util.List;
+
+
+@RequiredArgsConstructor
+@Controller
+public class MainController {
+
+    private final ProductService productService;
+    private final MenuService menuService;
+    private final OrderService orderService;
+
+
+    @GetMapping("/")
+    public String home(Model model) {
+        // РџРѕР»СѓС‡Р°РµРј СЃРїРёСЃРѕРє РІСЃРµС… РјРµРЅСЋ РёР· СЃРµСЂРІРёСЃР°
+        List<Menu> menus = menuService.getAllMenus();
+        // РџРµСЂРµРґР°РµРј СЃРїРёСЃРѕРє РјРµРЅСЋ РІ РјРѕРґРµР»СЊ
+        model.addAttribute("menus", menus);
+        model.addAttribute("message", "Р”РѕР±СЂРѕ РїРѕР¶Р°Р»РѕРІР°С‚СЊ РІ РЅР°С€ СЂРµСЃС‚РѕСЂР°РЅ!");
+        return "index"; // РРјСЏ С€Р°Р±Р»РѕРЅР° Р±РµР· СЂР°СЃС€РёСЂРµРЅРёСЏ .html
+    }
+
+
+    @GetMapping("/menu")
+    public String menu(@RequestParam(required = false) Long mid, HttpSession session, Model model) {
+        // Р•СЃР»Рё menuId РЅРµ СѓРєР°Р·Р°РЅ, РёСЃРїРѕР»СЊР·СѓРµРј Р·РЅР°С‡РµРЅРёРµ РёР· СЃРµСЃСЃРёРё
+        Long menuId = (mid != null) ? mid : (Long) session.getAttribute("currentMenuId");
+
+        // Р•СЃР»Рё menuId РІСЃС‘ РµС‰С‘ null, РёСЃРїРѕР»СЊР·СѓРµРј Р·РЅР°С‡РµРЅРёРµ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (РЅР°РїСЂРёРјРµСЂ, 1)
+        if (menuId == null) {
+            menuId = 1L;
+        }
+
+        // РЎРѕС…СЂР°РЅСЏРµРј menuId РІ СЃРµСЃСЃРёРё
+        session.setAttribute("currentMenuId", menuId);
+
+        // РџРѕР»СѓС‡Р°РµРј СЌР»РµРјРµРЅС‚С‹ РјРµРЅСЋ РїРѕ menuId
+        List<MenuItem> menuItems = menuService.getMenuItems(menuId);
+        // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РєРѕСЂР·РёРЅС‹, РµСЃР»Рё РµС‘ РЅРµС‚ РІ СЃРµСЃСЃРёРё
+        List<MenuItem> cart = (List<MenuItem>) session.getAttribute("cart");
+        if (cart == null) {
+            cart = new ArrayList<>();
+            session.setAttribute("cart", cart);
+        }
+
+        double total = cart != null ? calculateTotal(cart) : 0.0; // Р’С‹С‡РёСЃР»СЏРµРј СЃСѓРјРјСѓ
+        model.addAttribute("menuItems", menuItems);
+        model.addAttribute("total", total); // РџРµСЂРµРґР°РµРј СЃСѓРјРјСѓ РІ РјРѕРґРµР»СЊ
+        return "menu";
+    }
+
+    private double calculateTotal(List<MenuItem> cart) {
+        return cart.stream().mapToDouble(MenuItem::getPrice).sum();
+    }
+
+
+    @GetMapping("/view")
+    public String viewOrders(Model model) {
+        model.addAttribute("orders", orderService.getAllOrdersWithTotals());
+        return "orders"; // РЁР°Р±Р»РѕРЅ orders.html
+    }
+
+
+}
+
+
+
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\controllers\MenuController.java
+================================================================================
+
+package com.example.diplom.controllers;
+
+import com.example.diplom.model.*;
+import com.example.diplom.service.MenuService;
+import com.example.diplom.service.OrderService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+
+@RestController
+@RequestMapping("/menus")
+@RequiredArgsConstructor
+public class MenuController {
+    private final MenuService menuService;
+    private final OrderService orderService;
+
+    @PostMapping
+    public ResponseEntity<Menu> createMenu(@RequestBody Menu menu) {
+        return ResponseEntity.ok(menuService.createMenu(menu));
+    }
+
+
+
+
+    /**
+     * Р”РѕР±Р°РІР»СЏРµС‚ РїРёС†С†Сѓ РІ РјРµРЅСЋ.
+     *
+     * @param menuId ID РјРµРЅСЋ.
+     * @param pizza  Р”Р°РЅРЅС‹Рµ РїРёС†С†С‹.
+     * @return РЎРѕС…СЂР°РЅРµРЅРЅР°СЏ РїРёС†С†Р°.
+     */
+    @PostMapping("/{menuId}/pizzas")
+    public ResponseEntity<PizzaMenuItem> addPizzaToMenu(
+            @PathVariable Long menuId,
+            @RequestBody PizzaMenuItem pizza
+    ) {
+
+        PizzaMenuItem savedPizza;
+        try {
+            savedPizza = (PizzaMenuItem) menuService.addItemToMenu(menuId, pizza);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new PizzaMenuItem());
+        }
+        return new ResponseEntity<>(savedPizza, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/{menuId}/rolls")
+    public ResponseEntity<RollMenuItem> addRollsToMenu(
+            @PathVariable Long menuId,
+            @RequestBody RollMenuItem roll
+    ) {
+
+        RollMenuItem savedRoll;
+        try {
+            savedRoll = (RollMenuItem) menuService.addItemToMenu(menuId, roll);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new RollMenuItem());
+        }
+        return new ResponseEntity<>(savedRoll, HttpStatus.CREATED);
+    }
+
+
+
+    @GetMapping("/{menuId}/items")
+    public ResponseEntity<List<MenuItem>> getMenuItems(@PathVariable Long menuId) {
+//        return ResponseEntity.ok(menuService.getMenuItems(menuId));
+
+
+        try {
+            Menu menuById=menuService.getMenuById(menuId);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ArrayList<>());
+        }
+
+        return ResponseEntity.ok(menuService.getMenuItems(menuId));
+    }
+
+
+    @GetMapping
+    public ResponseEntity<List<Menu>> getAllMenus() {
+        return new ResponseEntity<>(menuService.getAllMenus(),HttpStatus.OK);
+    }
+}
+
+
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\controllers\OrderController.java
+================================================================================
+
+package com.example.diplom.controllers;
+
+
+//import com.example.diplom.cases.AddProductToOrderUseCase;
+import com.example.diplom.dto.OrderResponse;
+import com.example.diplom.model.Order;
+
+import com.example.diplom.service.OrderService;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.List;
+
+@Slf4j
+@AllArgsConstructor
+@RestController
+@RequestMapping("/orders")
+class OrderController {
+
+    private final OrderService orderService;
+
+    @PostMapping
+    public ResponseEntity<Order> createOrder(@RequestBody Order order) {
+        return  new  ResponseEntity<> (orderService.createOrder(order),HttpStatus.CREATED);
+    }
+
+
+
+
+
+    @GetMapping("/{id}")
+    public ResponseEntity<OrderResponse> getOrder(@PathVariable Long id) {
+        Order orderById;
+        try {
+            orderById = orderService.getOrderById(id);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new OrderResponse());
+        }
+        double total = orderService.calculateOrderTotal(id);
+        OrderResponse response = orderService.orderToOrderResponse(orderById, total);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<OrderResponse>> getAllOrders() {
+        return new ResponseEntity<>(orderService.getAllOrdersWithTotals(),HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
+        orderService.deleteOrder(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Order>  updateOrder(@PathVariable Long id, @RequestBody Order order) {
+
+
+        try {
+            return new ResponseEntity<>(orderService.updateOrder(order), HttpStatus.OK);
+        } catch (RuntimeException e) {
+            log.warn("Р—Р°РєР°Р· СЃ С‚Р°РєРёРј Id РЅРµ РЅР°Р№РґРµРЅ");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Order());
+        }
+    }
+
+    @PostMapping("/{orderId}/menu-items/{menuItemId}")
+    public ResponseEntity<Order> addProductFromMenu(
+            @PathVariable Long orderId,
+            @PathVariable Long menuItemId
+    ) {
+
+        try {
+            Order updatedOrder = orderService.addProductFromMenu(orderId, menuItemId);
+            return new ResponseEntity<>(updatedOrder, HttpStatus.OK);
+        } catch (RuntimeException e) {
+            log.warn("РћС€РёР±РєР° РїСЂРё РґРѕР±Р°РІР»РµРЅРёРё РїСЂРѕРґСѓРєС‚Р° РІ Р·Р°РєР°Р·: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Order());
+        }
+    }
+
+
+    @GetMapping("/view")
+    public String viewOrders(Model model) {
+        model.addAttribute("orders", orderService.getAllOrdersWithTotals());
+        return "orders"; // РЁР°Р±Р»РѕРЅ orders.html
+    }
+
+    @PostMapping("/add")
+    public String addToOrder(
+            @RequestParam Long menuItemId,
+            RedirectAttributes redirectAttributes
+    ) {
+        try {
+            // Р—РґРµСЃСЊ РјРѕР¶РЅРѕ РґРѕР±Р°РІРёС‚СЊ Р»РѕРіРёРєСѓ РґР»СЏ С‚РµРєСѓС‰РµРіРѕ Р·Р°РєР°Р·Р° РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+            Order order = orderService.createOrder(new Order()); // РЎРѕР·РґР°РµРј РЅРѕРІС‹Р№ Р·Р°РєР°Р· РґР»СЏ РїСЂРёРјРµСЂР°
+            orderService.addProductFromMenu(order.getId(), menuItemId);
+            redirectAttributes.addFlashAttribute("success", "Р‘Р»СЋРґРѕ РґРѕР±Р°РІР»РµРЅРѕ РІ Р·Р°РєР°Р·!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "РћС€РёР±РєР°: " + e.getMessage());
+        }
+        return "redirect:/menu";
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\controllers\ProductsController.java
+================================================================================
+
+package com.example.diplom.controllers;
+
+import com.example.diplom.dto.ProductDTO;
+import com.example.diplom.model.*;
+import com.example.diplom.service.ProductService;
+import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@AllArgsConstructor
+@RequestMapping("/products")
+public class ProductsController {
+
+
+    private final ProductService productService;
+
+
+
+    @PostMapping
+    public ResponseEntity<Product> createProduct(@RequestBody ProductDTO productDTO) {
+        Product product;
+        if ("PIZZA".equals(productDTO.getDtype())) {
+            product = new Pizza(productDTO.getName(), productDTO.getDescription(), productDTO.getPrice(), productDTO.getDiameter());
+        } else if ("ROLL".equals(productDTO.getDtype())) {
+            product = new RollDish(productDTO.getName(), productDTO.getDescription(), productDTO.getPrice(), productDTO.getPieceCount());
+        } else {
+            throw new IllegalArgumentException("РќРµРёР·РІРµСЃС‚РЅС‹Р№ С‚РёРї РїСЂРѕРґСѓРєС‚Р°");
+        }
+        Product createdProduct = productService.createProduct(product);
+        return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Product> getProduct(@PathVariable Long id) {
+        Product productById;
+        try {
+            productById = (Product) productService.getProductById(id);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Pizza());
+        }
+
+        return new ResponseEntity<>(productById, HttpStatus.OK);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Product>>getAllProducts() {
+        return new ResponseEntity<>(productService.getAllProducts(), HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void>deleteProduct(@PathVariable Long id) {
+
+        Product productById;
+        try {
+            productById = productService.getProductById(id);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+        productService.deleteProduct(productById.getId());
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Product>  updateProduct(@PathVariable Long id, @RequestBody ProductDTO productDTO) {
+        Product productById;
+        try {
+            productById = productService.getProductById(id);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Pizza());
+        }
+
+
+        if (productDTO.getName() != null) {
+            productById.setName(productDTO.getName());
+        }
+        if (productDTO.getDescription() != null) {
+            productById.setDescription(productDTO.getDescription());
+        }
+        if (productDTO.getPrice() != 0) {
+            productById.setPrice(productDTO.getPrice());
+        }
+        if (productDTO.getProductStatus() != null) {
+            productById.setProductStatus(productDTO.getProductStatus());
+        }
+
+
+        if (productById instanceof Pizza && productDTO.getDiameter() != 0) {
+            ((Pizza) productById).setDiameter(productDTO.getDiameter());
+        }
+
+
+        Product updatedProduct = productService.updateProduct(productById);
+
+
+        return new ResponseEntity<>(updatedProduct, HttpStatus.OK);
+
+
+    }
+
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\dto\OrderResponse.java
+================================================================================
+
+package com.example.diplom.dto;
+
+
+import com.example.diplom.model.OrderStatus;
+import com.example.diplom.model.Product;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.List;
+
+@Getter
+@Setter
+public class OrderResponse {
+    private Long id;
+    private OrderStatus status;
+    private List<Product> products;
+    private double total;
+    private String restaurantName;
+    private String restaurantAddress;
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\dto\ProductDTO.java
+================================================================================
+
+package com.example.diplom.dto;
+
+
+import com.example.diplom.model.ProductStatus;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import org.springframework.context.annotation.Bean;
+
+@AllArgsConstructor
+@Data
+public class ProductDTO {
+    public Long id;
+    public String name;
+    public String description;
+    public double price;
+    public ProductStatus productStatus;
+    public int diameter;
+    public int pieceCount;
+    public String dtype;
+
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Dish.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+
+@Entity
+@DiscriminatorValue("DISH")
+public abstract class Dish extends Product {
+
+    public Dish() {
+        super();
+    }
+
+    public Dish(String name, String description, double price) {
+        super(name, description, price);
+    }
+
+    @Override
+    public abstract Dish clone();
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Menu.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "menus")
+public class Menu {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String address; // РђРґСЂРµСЃ Р·Р°РІРµРґРµРЅРёСЏ
+    private String description;
+
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\MenuItem.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "menu_items")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "dtype", discriminatorType = DiscriminatorType.STRING)
+public abstract class MenuItem {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String description;
+    private double price;
+
+    @ManyToOne
+    @JoinColumn(name = "menu_id")
+    private Menu menu;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+    public Menu getMenu() {
+        return menu;
+    }
+
+    public void setMenu(Menu menu) {
+        this.menu = menu;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Order.java
+================================================================================
+
+package com.example.diplom.model;
+
+
+import jakarta.persistence.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+
+@Entity
+@Table(name = "orders")
+public class Order {
+
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "orders_products",
+            joinColumns = @JoinColumn(name = "order_id"),
+            inverseJoinColumns = @JoinColumn(name="product_id")
+    )
+    private List<Product> products;
+
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status = OrderStatus.NEW;
+
+    public Order() {
+        this.products = new ArrayList<>();
+    }
+
+
+    public Long getId() {
+        return id;
+    }
+
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public List<Product> getProducts() {
+        return products;
+    }
+
+    public void setProducts(List<Product> products) {
+        this.products = products;
+    }
+
+    public OrderStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(OrderStatus status) {
+        this.status = status;
+    }
+
+
+
+    public void addProduct(Product product) {
+        products.add(product);
+        updateOrderStatus();
+    }
+
+
+    private void updateOrderStatus() {
+        boolean allReady = products.stream().allMatch(p -> p.getProductStatus() == ProductStatus.READY);
+        boolean anyInProgress = products.stream().anyMatch(p -> p.getProductStatus() == ProductStatus.IN_PROGRESS);
+
+        if (allReady) {
+            status = OrderStatus.COMPLETED;
+        } else if (anyInProgress) {
+            status = OrderStatus.IN_PROGRESS;
+        } else {
+            status = OrderStatus.NEW;
+        }
+
+
+    }
+
+    public void updateProductStatus(Product product, ProductStatus status) {
+        product.setProductStatus(status);
+        updateOrderStatus();
+    }
+
+
+
+
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\OrderStatus.java
+================================================================================
+
+package com.example.diplom.model;
+
+public enum OrderStatus {
+    NEW, IN_PROGRESS, COMPLETED;
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Pizza.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+@Entity
+@DiscriminatorValue("PIZZA")
+public class Pizza extends Dish {
+    private int diameter; // Р”РёР°РјРµС‚СЂ РїРёС†С†С‹ РІ СЃРј
+
+    public Pizza() {
+        super();
+    }
+
+    public Pizza(String name, String description, double price, int diameter) {
+        super(name, description, price);
+        this.diameter = diameter;
+    }
+
+    public int getDiameter() {
+        return diameter;
+    }
+
+    public void setDiameter(int diameter) {
+        this.diameter = diameter;
+    }
+
+    @Override
+    public Pizza clone() {
+        Pizza clone = new Pizza(this.getName(), this.getDescription(), this.getPrice(), this.diameter);
+        clone.setId(null); // РЎР±СЂР°СЃС‹РІР°РµРј ID РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕР№ Р·Р°РїРёСЃРё
+        clone.setProductStatus(this.getProductStatus());
+        return clone;
+    }
+
+    @Override
+    public String toString() {
+        return "Pizza{" +
+                "name='" + getName() + '\'' +
+                ", description='" + getDescription() + '\'' +
+                ", price=" + getPrice() +
+                ", diameter=" + diameter +
+                ", progressStatus=" + getProductStatus() +
+                '}';
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\PizzaMenuItem.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+@Entity
+@DiscriminatorValue("PIZZA")
+public class PizzaMenuItem extends MenuItem {
+
+    private int diameter; // РЈРЅРёРєР°Р»СЊРЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+
+
+    public int getDiameter() {
+        return diameter;
+    }
+
+    public void setDiameter(int diameter) {
+        this.diameter = diameter;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Product.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.*;
+
+@Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "dtype", discriminatorType = DiscriminatorType.STRING)
+@Table(name = "PRODUCTS")
+public abstract class Product implements Prototype {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String name;
+    private String description;
+    private double price;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private ProductStatus productStatus = ProductStatus.NOT_STARTED;
+
+    @Column(name = "menu_id")
+    private Long menuId;
+
+    public Long getMenuId() {
+        return menuId;
+    }
+
+    public void setMenuId(Long menuId) {
+        this.menuId = menuId;
+    }
+
+    public Product(){}
+
+    public Product(String name, String description, double price, Long menuId) {
+        this.name = name;
+        this.description = description;
+        this.price = price;
+        this.menuId = menuId;
+    }
+
+    public Product(String name, String description, double price) {
+        this.name = name;
+        this.description = description;
+        this.price = price;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public ProductStatus getProductStatus() {
+        return productStatus;
+    }
+
+    public void setProductStatus(ProductStatus productStatus) {
+        this.productStatus = productStatus;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+
+
+
+
+    public void  updateStatus( ProductStatus productStatus){
+        this.productStatus = productStatus;
+    }
+
+    @Override
+    public String toString() {
+        return "Product{" +
+                "name='" + name + '\'' +
+                ", description='" + description + '\'' +
+                ", price=" + price +
+                ", progressStatus=" + productStatus +
+                '}';
+    }
+
+    @Override
+    public abstract Prototype clone();
+
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\ProductStatus.java
+================================================================================
+
+package com.example.diplom.model;
+
+public enum ProductStatus {
+    NOT_STARTED, IN_PROGRESS, READY;
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Prototype.java
+================================================================================
+
+package com.example.diplom.model;
+
+public interface Prototype {
+
+    public Prototype clone();
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Role.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "roles")
+public class Role {
+
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+
+    private String name;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\RollDish.java
+================================================================================
+
+package com.example.diplom.model;
+
+
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+@Entity
+@DiscriminatorValue("ROLL")
+public class RollDish extends Dish {
+    private int pieceCount; // Р”РёР°РјРµС‚СЂ РїРёС†С†С‹ РІ СЃРј
+
+    public RollDish() {
+        super();
+    }
+
+    public RollDish (String name, String description, double price, int pieceCount) {
+        super(name, description, price);
+        this.pieceCount = pieceCount;
+    }
+
+    public int getPieceCount() {
+        return pieceCount;
+    }
+
+    public void setPieceCount(int pieceCount) {
+        this.pieceCount = pieceCount;
+    }
+
+    @Override
+    public RollDish clone() {
+        RollDish clone = new RollDish(this.getName(), this.getDescription(), this.getPrice(), this.pieceCount);
+        clone.setId(null); // РЎР±СЂР°СЃС‹РІР°РµРј ID РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕР№ Р·Р°РїРёСЃРё
+        clone.setProductStatus(this.getProductStatus());
+        return clone;
+    }
+
+    @Override
+    public String toString() {
+        return "Roll{" +
+                "name='" + getName() + '\'' +
+                ", description='" + getDescription() + '\'' +
+                ", price=" + getPrice() +
+                ", pieceCount=" + pieceCount +
+                ", progressStatus=" + getProductStatus() +
+                '}';
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\RollMenuItem.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+@Entity
+@DiscriminatorValue("ROLL")
+public class RollMenuItem extends MenuItem {
+
+    private int pieceCount; // РЈРЅРёРєР°Р»СЊРЅРѕРµ РїРѕР»Рµ РґР»СЏ СЂРѕР»Р»РѕРІ
+
+    public int getPieceCount() {
+        return pieceCount;
+    }
+
+    public void setPieceCount(int pieceCount) {
+        this.pieceCount = pieceCount;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\User.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.*;
+
+import java.util.Set;
+
+@Entity
+@Table(name = "users")
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+
+    private String username;
+    private String password;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "users_roles", // РРјСЏ СЃРІСЏР·СѓСЋС‰РµР№ С‚Р°Р±Р»РёС†С‹
+            joinColumns = @JoinColumn(name = "user_id"), // РљРѕР»РѕРЅРєР° РґР»СЏ User
+            inverseJoinColumns = @JoinColumn(name = "role_id") // РљРѕР»РѕРЅРєР° РґР»СЏ Role
+    )
+    private Set<Role> roles;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public Set<Role> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\MenuItemRepository.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.MenuItem;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+
+
+@Repository
+public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
+    List<MenuItem> findByMenuId(Long menuId);
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\MenuRepository.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Menu;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface MenuRepository extends JpaRepository<Menu, Long> {
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\OrderJpaRepository.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Order;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+
+@Repository
+public interface OrderJpaRepository extends JpaRepository<Order, Long>{
+
+
+
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\OrderRepository.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Order;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface OrderRepository {
+    Order save(Order order);
+    Optional<Order> findById(Long id);
+
+
+    void deleteById(Long id);
+
+    Order update(Order order);
+
+    List<Order> findAll();
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\OrderRepositoryImpl.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Order;
+import org.springframework.stereotype.Repository;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.List;
+import java.util.Optional;
+
+
+@Repository
+public class OrderRepositoryImpl implements OrderRepository{
+
+
+    @Autowired
+    private OrderJpaRepository orderJpaRepository;
+
+    @Override
+    public Order save(Order order) {
+        return orderJpaRepository.save(order);
+    }
+
+    @Override
+    public Optional<Order> findById(Long id) {
+        return Optional.ofNullable(orderJpaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ")));
+    }
+
+
+
+    @Override
+    public void deleteById(Long id) {
+        orderJpaRepository.deleteById(id);
+    }
+
+    @Override
+    public Order update(Order order) {
+        return orderJpaRepository.save(order); // save() РѕР±РЅРѕРІР»СЏРµС‚, РµСЃР»Рё РѕР±СЉРµРєС‚ СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚
+    }
+
+    @Override
+    public List<Order> findAll() {
+        return orderJpaRepository.findAll();
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\ProductJpaRepository.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Product;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+
+@Repository
+public interface ProductJpaRepository extends JpaRepository<Product, Long> {
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\ProductRepository.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Product;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface ProductRepository {
+
+    Product save(Product product);
+
+    Optional<Product> findById(Long id);
+
+    List<Product> findAll();
+
+    void deleteById(Long id);
+
+    Product update(Product product);
+
+    boolean existsById(Long id);
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\ProductRepositoryImpl.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Product;
+import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+
+@Repository
+public class ProductRepositoryImpl implements ProductRepository {
+
+
+    @Autowired
+    private ProductJpaRepository productJpaRepository;
+
+
+    @Override
+    public Product save(Product product) {
+        return productJpaRepository.save(product);
+    }
+
+    @Override
+    public Optional<Product> findById(Long id) {
+        Optional<Product>  product= Optional.ofNullable(productJpaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("РџСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ")));
+        return product;
+    }
+
+    @Override
+    public List<Product> findAll() {
+        return productJpaRepository.findAll();
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        productJpaRepository.deleteById(id);
+    }
+
+    @Override
+    public Product update(Product product) {
+        return productJpaRepository.save(product); // save() РѕР±РЅРѕРІР»СЏРµС‚, РµСЃР»Рё РѕР±СЉРµРєС‚ СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚
+    }
+
+    @Override
+    public boolean existsById(Long id) {
+        return productJpaRepository.existsById(id);
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\UserRepository.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Menu;
+import com.example.diplom.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+
+@Repository
+public interface UserRepository  extends JpaRepository<User, Long> {
+
+    Optional<User> findByUsername(String username);
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\service\CustomUserDetailsService.java
+================================================================================
+
+package com.example.diplom.service;
+
+import com.example.diplom.model.User;
+import com.example.diplom.model.Role;
+import com.example.diplom.repositories.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        return org.springframework.security.core.userdetails.User.builder()
+                .username(user.getUsername())
+                .password(user.getPassword())
+                .roles(user.getRoles().stream()
+                        .map(Role::getName)
+                        .toArray(String[]::new))
+                .build();
+
+
+
+
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\service\MenuService.java
+================================================================================
+
+package com.example.diplom.service;
+
+import com.example.diplom.model.Menu;
+import com.example.diplom.model.MenuItem;
+import com.example.diplom.repositories.MenuItemRepository;
+import com.example.diplom.repositories.MenuRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+public class MenuService {
+    private final MenuRepository menuRepository;
+    private final MenuItemRepository menuItemRepository;
+
+    // РЎРѕР·РґР°С‚СЊ РјРµРЅСЋ
+    public Menu createMenu(Menu menu) {
+        return menuRepository.save(menu);
+    }
+
+
+
+    // Р”РѕР±Р°РІРёС‚СЊ РїСЂРѕРґСѓРєС‚ РІ РјРµРЅСЋ
+    public MenuItem addItemToMenu(Long menuId, MenuItem item) {
+        Menu menu = menuRepository.findById(menuId)
+                .orElseThrow(() -> new RuntimeException("РњРµРЅСЋ РЅРµ РЅР°Р№РґРµРЅРѕ"));
+        item.setMenu(menu);
+        return menuItemRepository.save(item);
+    }
+
+    // РџРѕР»СѓС‡РёС‚СЊ РІСЃРµ РїСЂРѕРґСѓРєС‚С‹ РёР· РјРµРЅСЋ
+    public List<MenuItem> getMenuItems(Long menuId) {
+
+        return menuItemRepository.findByMenuId(menuId);
+    }
+
+    public List<Menu> getAllMenus() {
+        return menuRepository.findAll();
+    }
+
+    public Menu getMenuById(Long menuId) {
+        Menu menu = menuRepository.findById(menuId)
+                .orElseThrow(() -> new RuntimeException("РњРµРЅСЋ РЅРµ РЅР°Р№РґРµРЅРѕ"));
+        return menu;
+    }
+
+    public Optional<MenuItem> getMenuItemById(Long menuItemId) {
+       return menuItemRepository.findById(menuItemId);
+
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\service\OrderService.java
+================================================================================
+
+package com.example.diplom.service;
+
+import com.example.diplom.dto.OrderResponse;
+import com.example.diplom.model.*;
+import com.example.diplom.repositories.MenuItemRepository;
+import com.example.diplom.repositories.OrderRepository;
+import com.example.diplom.repositories.ProductRepository;
+import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Slf4j
+@AllArgsConstructor
+@Service
+public class OrderService {
+    private final OrderRepository orderRepository;
+
+    private final ProductRepository productRepository;
+
+    private final MenuItemRepository menuItemRepository;
+    private final MenuService menuService;
+
+//    public OrderService(OrderRepository orderRepository) {
+//        this.orderRepository = orderRepository;
+//    }
+
+    public Order createOrder(Order order) {
+        return orderRepository.save(order);
+    }
+
+    public Order getOrderById(Long id) {
+        return orderRepository.findById(id)
+                .orElseThrow(() -> {
+                log.warn("Р—Р°РєР°Р· СЃ ID {} РЅРµ РЅР°Р№РґРµРЅ", id);
+                return new RuntimeException("Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ");
+                });
+    }
+
+    public List<Order> getAllOrders() {
+        return orderRepository.findAll();
+    }
+
+    public void deleteOrder(Long id) {
+        orderRepository.deleteById(id);
+    }
+
+    public Order updateOrder(Order order) {
+        return orderRepository.update(order);
+    }
+
+
+
+    @Transactional
+    public Order addProductFromMenu(Long orderId, Long menuItemId) {
+        // РџРѕР»СѓС‡РёС‚СЊ РїСЂРѕРґСѓРєС‚ РёР· РјРµРЅСЋ
+        MenuItem menuItem = menuItemRepository.findById(menuItemId)
+                .orElseThrow(() -> new RuntimeException("РџСЂРѕРґСѓРєС‚ РІ РјРµРЅСЋ РЅРµ РЅР°Р№РґРµРЅ"));
+
+        // РЎРѕР·РґР°С‚СЊ РєРѕРїРёСЋ РїСЂРѕРґСѓРєС‚Р° РґР»СЏ Р·Р°РєР°Р·Р°
+        Product product = createProductFromMenuItem(menuItem);
+        product.setMenuId(menuItem.getMenu().getId());
+
+        // РЎРѕС…СЂР°РЅРёС‚СЊ РїСЂРѕРґСѓРєС‚
+        Product savedProduct = productRepository.save(product);
+
+        // Р”РѕР±Р°РІРёС‚СЊ РїСЂРѕРґСѓРєС‚ РІ Р·Р°РєР°Р·
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ"));
+        order.addProduct(savedProduct);
+
+        return orderRepository.save(order);
+    }
+
+    private Product createProductFromMenuItem(MenuItem item) {
+        // Р РµР°Р»РёР·Р°С†РёСЏ РєР»РѕРЅРёСЂРѕРІР°РЅРёСЏ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РёРїР° РїСЂРѕРґСѓРєС‚Р°
+        if (item instanceof PizzaMenuItem) {
+            PizzaMenuItem pizzaItem = (PizzaMenuItem) item;
+            Pizza pizza = new Pizza();
+            pizza.setName(pizzaItem.getName());
+            pizza.setDescription(pizzaItem.getDescription());
+            pizza.setPrice(pizzaItem.getPrice());
+            pizza.setDiameter(pizzaItem.getDiameter());
+            pizza.setMenuId(item.getMenu().getId());
+            return pizza;
+        }else if (item instanceof RollMenuItem) {
+            RollMenuItem rollItem = (RollMenuItem) item;
+            RollDish roll = new RollDish();
+            roll.setName(rollItem.getName());
+            roll.setDescription(rollItem.getDescription());
+            roll.setPrice(rollItem.getPrice());
+            roll.setPieceCount(rollItem.getPieceCount()); // РўРѕР»СЊРєРѕ pieceCount
+            roll.setMenuId(item.getMenu().getId());
+            return roll;
+        }
+
+        // РђРЅР°Р»РѕРіРёС‡РЅРѕ РґР»СЏ РґСЂСѓРіРёС… С‚РёРїРѕРІ
+        throw new IllegalArgumentException("РўРёРї РїСЂРѕРґСѓРєС‚Р° РЅРµ РїРѕРґРґРµСЂР¶РёРІР°РµС‚СЃСЏ");
+    }
+
+
+
+    /**
+     * РџРѕРґСЃС‡РёС‚С‹РІР°РµС‚ СЃСѓРјРјСѓ Р·Р°РєР°Р·Р°.
+     *
+     * @param orderId ID Р·Р°РєР°Р·Р°.
+     * @return РЎСѓРјРјР° Р·Р°РєР°Р·Р°.
+     */
+    public double calculateOrderTotal(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ"));
+
+        return order.getProducts().stream()
+                .mapToDouble(Product::getPrice)
+                .sum();
+    }
+
+
+    public OrderResponse orderToOrderResponse(Order orderById, double total) {
+
+        OrderResponse response = new OrderResponse();
+        response.setId(orderById.getId());
+        response.setStatus(orderById.getStatus());
+        response.setProducts(orderById.getProducts());
+        response.setTotal(total);
+        return response;
+    }
+
+    public List<OrderResponse> getAllOrdersWithTotals() {
+        List<Order> orders=orderRepository.findAll();
+        return orders.stream()
+                .map(order -> {
+                    double total = calculateOrderTotal(order.getId());
+                    OrderResponse response = orderToOrderResponse(order, total);
+
+
+                    // РџСЂРѕРІРµСЂСЏРµРј, РµСЃС‚СЊ Р»Рё РїСЂРѕРґСѓРєС‚С‹ РІ Р·Р°РєР°Р·Рµ
+                    if (!order.getProducts().isEmpty()) {
+                        Product firstProduct = order.getProducts().get(0);
+                        // РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ menuId РЅРµ null
+                        if (firstProduct.getMenuId() != null) {
+                            try {
+                                Menu menu = menuService.getMenuById(firstProduct.getMenuId());
+                                response.setRestaurantName(menu.getName());
+                                response.setRestaurantAddress(menu.getAddress());
+                            } catch (RuntimeException e) {
+                                // Р›РѕРіРёСЂСѓРµРј РѕС€РёР±РєСѓ, РµСЃР»Рё РјРµРЅСЋ РЅРµ РЅР°Р№РґРµРЅРѕ
+                                log.error("РњРµРЅСЋ СЃ ID {} РЅРµ РЅР°Р№РґРµРЅРѕ", firstProduct.getMenuId());
+                                response.setRestaurantName("РќРµРёР·РІРµСЃС‚РЅС‹Р№ СЂРµСЃС‚РѕСЂР°РЅ");
+                                response.setRestaurantAddress("РђРґСЂРµСЃ РЅРµ СѓРєР°Р·Р°РЅ");
+                            }
+                        } else {
+                            log.warn("РџСЂРѕРґСѓРєС‚ {} РЅРµ РёРјРµРµС‚ menuId", firstProduct.getId());
+                            response.setRestaurantName("РќРµРёР·РІРµСЃС‚РЅС‹Р№ СЂРµСЃС‚РѕСЂР°РЅ");
+                            response.setRestaurantAddress("РђРґСЂРµСЃ РЅРµ СѓРєР°Р·Р°РЅ");
+                        }
+                    }
+                    return response;
+                })
+                .collect(Collectors.toList());
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\service\ProductService.java
+================================================================================
+
+
+
+package com.example.diplom.service;
+
+import com.example.diplom.model.Product;
+import com.example.diplom.repositories.ProductRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ProductService {
+
+    private final ProductRepository productRepository;
+
+    /**
+     * РЎРѕР·РґР°РµС‚ РЅРѕРІС‹Р№ РїСЂРѕРґСѓРєС‚, РµСЃР»Рё РїСЂРѕРґСѓРєС‚ СЃ С‚Р°РєРёРј ID РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚.
+     *
+     * @param product РџСЂРѕРґСѓРєС‚ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ.
+     * @return РЎРѕР·РґР°РЅРЅС‹Р№ РїСЂРѕРґСѓРєС‚.
+     * @throws IllegalArgumentException Р•СЃР»Рё РїСЂРѕРґСѓРєС‚ СЃ С‚Р°РєРёРј ID СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚.
+     */
+    @Transactional
+    public Product createProduct(Product product) {
+        if (product.getId() != null && productRepository.existsById(product.getId())) {
+            log.warn("РџСЂРѕРґСѓРєС‚ СЃ ID {} СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚", product.getId());
+            throw new IllegalArgumentException("РџСЂРѕРґСѓРєС‚ СЃ С‚Р°РєРёРј ID СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚");
+        }
+        return productRepository.save(product);
+    }
+
+    /**
+     * Р’РѕР·РІСЂР°С‰Р°РµС‚ РїСЂРѕРґСѓРєС‚ РїРѕ РµРіРѕ ID.
+     *
+     * @param id ID РїСЂРѕРґСѓРєС‚Р°.
+     * @return РќР°Р№РґРµРЅРЅС‹Р№ РїСЂРѕРґСѓРєС‚.
+     * @throws RuntimeException Р•СЃР»Рё РїСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ.
+     */
+    public Product getProductById(Long id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("РџСЂРѕРґСѓРєС‚ СЃ ID {} РЅРµ РЅР°Р№РґРµРЅ", id);
+                    return new RuntimeException("РџСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ");
+                });
+    }
+
+    /**
+     * Р’РѕР·РІСЂР°С‰Р°РµС‚ СЃРїРёСЃРѕРє РІСЃРµС… РїСЂРѕРґСѓРєС‚РѕРІ.
+     *
+     * @return РЎРїРёСЃРѕРє РїСЂРѕРґСѓРєС‚РѕРІ.
+     */
+    public List<Product> getAllProducts() {
+        return productRepository.findAll();
+    }
+
+    /**
+     * РЈРґР°Р»СЏРµС‚ РїСЂРѕРґСѓРєС‚ РїРѕ РµРіРѕ ID.
+     *
+     * @param id ID РїСЂРѕРґСѓРєС‚Р°.
+     * @throws RuntimeException Р•СЃР»Рё РїСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ.
+     */
+    @Transactional
+    public void deleteProduct(Long id) {
+        if (!productRepository.existsById(id)) {
+            log.warn("РџСЂРѕРґСѓРєС‚ СЃ ID {} РЅРµ РЅР°Р№РґРµРЅ", id);
+            throw new RuntimeException("РџСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ");
+        }
+        productRepository.deleteById(id);
+    }
+
+    /**
+     * РћР±РЅРѕРІР»СЏРµС‚ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ РїСЂРѕРґСѓРєС‚.
+     *
+     * @param product РџСЂРѕРґСѓРєС‚ РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ.
+     * @return РћР±РЅРѕРІР»РµРЅРЅС‹Р№ РїСЂРѕРґСѓРєС‚.
+     * @throws RuntimeException Р•СЃР»Рё РїСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ.
+     */
+    @Transactional
+    public Product updateProduct(Product product) {
+        if (product.getId() == null || !productRepository.existsById(product.getId())) {
+            log.warn("РџСЂРѕРґСѓРєС‚ СЃ ID {} РЅРµ РЅР°Р№РґРµРЅ", product.getId());
+            throw new RuntimeException("РџСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ");
+        }
+        return productRepository.save(product);
+    }
+
+    /**
+     * РЎРѕР·РґР°РµС‚ РєР»РѕРЅ РїСЂРѕРґСѓРєС‚Р°.
+     *
+     * @param product РџСЂРѕРґСѓРєС‚ РґР»СЏ РєР»РѕРЅРёСЂРѕРІР°РЅРёСЏ.
+     * @return РљР»РѕРЅРёСЂРѕРІР°РЅРЅС‹Р№ РїСЂРѕРґСѓРєС‚.
+     */
+    @Transactional
+    public Product createCloneProduct(Product product) {
+        Product clone = (Product) product.clone();
+        clone.setId(null); // РЎР±СЂР°СЃС‹РІР°РµРј ID РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕР№ Р·Р°РїРёСЃРё
+        return productRepository.save(clone);
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\DiplomApplication.java
+================================================================================
+
+package com.example.diplom;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class DiplomApplication {
+
+	public static void main(String[] args) {
+
+
+
+		SpringApplication.run(DiplomApplication.class, args);
+	}
+
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\resources\templates\fragments\cart-content.html
+================================================================================
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="cart-content(total)">
+    <div th:if="${not #lists.isEmpty(session.cart)}">
+        <div class="cart-item mb-3" th:each="item : ${session.cart}">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="me-3">
+                    <h5 th:text="${item.name}"></h5>
+                    <small class="text-muted" th:text="${item.description}"></small>
+                </div>
+                <div class="text-end">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-primary" th:text="'в‚Ѕ' + ${#numbers.formatDecimal(item.price, 1, 2)}"></span>
+                        <form th:action="@{/cart/remove}" method="post">
+                            <input type="hidden" name="menuItemId" th:value="${item.id}">
+                            <button type="submit" class="btn btn-danger btn-sm">
+                                &times;
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="total-price py-3 border-top">
+            <h5 class="d-flex justify-content-between">
+                <span>РС‚РѕРіРѕ:</span>
+                <span th:text="'в‚Ѕ' + ${total != null ? #numbers.formatDecimal(total, 1, 2) : '0.00'}"></span>
+            </h5>
+        </div>
+
+        <form th:action="@{/cart/checkout}" method="post">
+            <button type="submit" class="btn btn-success w-100">
+                РћС„РѕСЂРјРёС‚СЊ Р·Р°РєР°Р·
+            </button>
+        </form>
+    </div>
+</div>
+</body>
+</html>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\resources\templates\cart.html
+================================================================================
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+    <!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ СЃРѕР±СЃС‚РІРµРЅРЅС‹С… СЃС‚РёР»РµР№ -->
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-body">
+            <h1 class="text-center mb-4 text-primary">РљРѕСЂР·РёРЅР°</h1>
+
+            <!-- РЈРІРµРґРѕРјР»РµРЅРёСЏ -->
+            <div th:if="${success}" class="alert alert-success">
+                [[${success}]]
+            </div>
+            <div th:if="${error}" class="alert alert-danger">
+                [[${error}]]
+            </div>
+
+            <!-- РЎРїРёСЃРѕРє Р±Р»СЋРґ РІ РєРѕСЂР·РёРЅРµ -->
+            <ul class="list-group mb-4">
+                <li class="list-group-item d-flex justify-content-between align-items-center"
+                    th:each="item : ${cart}">
+                        <span>
+                            [[${item.name}]] - [[${item.price}]] в‚Ѕ
+                        </span>
+                    <form th:action="@{/cart/remove}" method="post">
+                        <input type="hidden" name="menuItemId" th:value="${item.id}">
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            РЈРґР°Р»РёС‚СЊ
+                        </button>
+                    </form>
+                </li>
+            </ul>
+
+            <!-- РС‚РѕРіРѕРІР°СЏ СЃСѓРјРјР° -->
+            <div class="text-end">
+                <h5>РС‚РѕРіРѕ: [[${total}]] в‚Ѕ</h5>
+            </div>
+
+            <!-- РљРЅРѕРїРєР° "РћС„РѕСЂРјРёС‚СЊ Р·Р°РєР°Р·" -->
+            <form th:action="@{/cart/checkout}" method="post" class="text-center mt-4">
+                <button type="submit" class="btn btn-success btn-lg">
+                    РћС„РѕСЂРјРёС‚СЊ Р·Р°РєР°Р·
+                </button>
+            </form>
+
+            <div class="text-center mt-4">
+                <a href="/" class="btn btn-outline-primary">
+                    в†ђ РќР° РіР»Р°РІРЅСѓСЋ
+                </a>
+                <a href="/menu" class="btn btn-outline-success ms-2">
+                    Р’РµСЂРЅСѓС‚СЊСЃСЏ РІ РјРµРЅСЋ в†’
+                </a>
+            </div>
+
+
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\resources\templates\index.html
+================================================================================
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+    <!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ СЃРѕР±СЃС‚РІРµРЅРЅС‹С… СЃС‚РёР»РµР№ -->
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+
+    <title>Р“Р»Р°РІРЅР°СЏ СЃС‚СЂР°РЅРёС†Р°</title>
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-body">
+            <h1 class="text-center mb-4 text-primary" th:text="${message}"></h1>
+
+            <!-- РЎРїРёСЃРѕРє РјРµРЅСЋ -->
+            <div class="list-group">
+                <a th:each="menu : ${menus}"
+                   th:href="@{/menu(mid=${menu.id})}"
+                   class="list-group-item list-group-item-action">
+                    <h5 th:text="${menu.name}"></h5>
+                    <p class="text-muted" th:text="${menu.description}"></p>
+                    <small class="text-muted" th:text="${menu.address}"></small>
+                </a>
+            </div>
+
+            <!-- РЎСЃС‹Р»РєР° РЅР° СЃС‚СЂР°РЅРёС†Сѓ РјРµРЅСЋ -->
+            <div class="text-center mt-4">
+                <a href="/menu" class="btn btn-outline-primary">
+                    РџРѕСЃРјРѕС‚СЂРµС‚СЊ РјРµРЅСЋ в†’-->
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ Bootstrap JS Рё Popper.js -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\resources\templates\login.html
+================================================================================
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Login</title>
+</head>
+<body>
+<form th:action="@{/login}" method="post">
+  <input type="text" name="username" placeholder="Username"/>
+  <input type="password" name="password" placeholder="Password"/>
+  <button type="submit">Login</button>
+</form>
+</body>
+</html>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\resources\templates\logout.html
+================================================================================
+
+<!-- Р’ РІР°С€РµРј HTML-С€Р°Р±Р»РѕРЅРµ -->
+<form th:action="@{/logout}" method="post" xmlns:th="http://www.w3.org/1999/xhtml">
+    <input type="submit" value="Р’С‹Р№С‚Рё">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+</form>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\resources\templates\menu.html
+================================================================================
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <title>РњРµРЅСЋ</title>
+</head>
+<body class="bg-light">
+
+<!-- РРєРѕРЅРєР° РєРѕСЂР·РёРЅС‹ -->
+<div class="cart-icon-wrapper">
+    <button class="btn btn-primary cart-icon" onclick="toggleCart()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-cart" viewBox="0 0 16 16">
+            <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5M3.102 4l1.313 7h8.17l1.313-7zM5 14a1 1 0 1 1 0 2 1 1 0 0 1 0-2m5 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2m-5 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2m5 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/>
+        </svg>
+        <span class="badge bg-danger" id="cart-counter" th:text="${session.cart != null ? #lists.size(session.cart) : 0}">0</span>
+    </button>
+</div>
+
+<!-- Р‘РѕРєРѕРІР°СЏ РїР°РЅРµР»СЊ РєРѕСЂР·РёРЅС‹ -->
+<div class="cart-sidebar" id="cart-sidebar">
+    <div class="cart-header">
+        <h4>Р’Р°С€Р° РєРѕСЂР·РёРЅР°</h4>
+        <button class="btn btn-close" onclick="toggleCart()"></button>
+    </div>
+    <div class="cart-body">
+        <!-- РЈРІРµРґРѕРјР»РµРЅРёСЏ -->
+        <div th:if="${success}" class="alert alert-success">
+            [[${success}]]
+        </div>
+        <div th:if="${error}" class="alert alert-danger">
+            [[${error}]]
+        </div>
+
+        <!-- РЎРѕРґРµСЂР¶РёРјРѕРµ РєРѕСЂР·РёРЅС‹ -->
+        <div th:replace="~{fragments/cart-content :: cart-content(total=${total})}"></div>
+    </div>
+</div>
+
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-body">
+            <h1 class="text-center mb-4 text-primary">РќР°С€Рµ РјРµРЅСЋ</h1>
+
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                <div class="col" th:each="menuItem : ${menuItems}">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title" th:text="${menuItem.name}"></h5>
+                            <p class="card-text text-muted" th:text="${menuItem.description}"></p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-success" th:text="'в‚Ѕ' + ${#numbers.formatDecimal(menuItem.price, 1, 2)}"></span>
+                                <span th:if="${menuItem instanceof T(com.example.diplom.model.PizzaMenuItem)}"
+                                      class="badge bg-info"
+                                      th:text="'Р”РёР°РјРµС‚СЂ: ' + ${menuItem.diameter} + 'СЃРј'">
+                                    </span>
+                                <span th:if="${menuItem instanceof T(com.example.diplom.model.RollMenuItem)}"
+                                      class="badge bg-warning"
+                                      th:text="'РљСѓСЃРѕС‡РєРѕРІ: ' + ${menuItem.pieceCount}">
+                                    </span>
+                            </div>
+                            <!-- РљРЅРѕРїРєР° "Р’ РєРѕСЂР·РёРЅСѓ" -->
+                            <form th:action="@{/cart/add}" method="post">
+                                <input type="hidden" name="menuItemId" th:value="${menuItem.id}">
+                                <input type="hidden" name="menuId" th:value="${menuItem.menu.id}">
+                                <button type="submit" class="btn btn-primary w-100">Р’ РєРѕСЂР·РёРЅСѓ</button>
+                            </form>
+                            <!-- Р¤РѕСЂРјР° СѓРґР°Р»РµРЅРёСЏ С‚РѕРІР°СЂР° РёР· РєРѕСЂР·РёРЅС‹ -->
+                            <!-- РџСЂРѕРІРµСЂСЏРµРј, РµСЃС‚СЊ Р»Рё С‚РѕРІР°СЂ РІ РєРѕСЂР·РёРЅРµ -->
+                            <div th:if="${#lists.contains(session.cart.![id], menuItem.id)}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <form th:action="@{/cart/remove}" method="post">
+                                        <input type="hidden" name="menuItemId" th:value="${menuItem.id}">
+                                        <input type="hidden" name="menuId" th:value="${menuItem.menu.id}">
+                                        <button type="submit" class="btn btn-danger btn-sm">
+                                            РЈРґР°Р»РёС‚СЊ РёР· РєРѕСЂР·РёРЅС‹
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="/" class="btn btn-outline-primary">
+                    в†ђ РќР° РіР»Р°РІРЅСѓСЋ
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ Bootstrap JS Рё Popper.js -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- РЎРєСЂРёРїС‚ РґР»СЏ РєРѕСЂР·РёРЅС‹ -->
+<script>
+    function toggleCart() {
+        const sidebar = document.getElementById('cart-sidebar');
+        sidebar.classList.toggle('active');
+
+        // Р”РѕР±Р°РІР»СЏРµРј Р·Р°С‚РµРјРЅРµРЅРёРµ С„РѕРЅР°
+        const overlay = document.createElement('div');
+        overlay.className = 'cart-overlay';
+        overlay.onclick = toggleCart;
+
+        if(sidebar.classList.contains('active')) {
+            document.body.appendChild(overlay);
+        } else {
+            document.querySelector('.cart-overlay')?.remove();
+        }
+    }
+</script>
+</body>
+</html>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\resources\templates\orders.html
+================================================================================
+
+<!DOCTYPE html>
+        <html xmlns:th="http://www.thymeleaf.org">
+        <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ Bootstrap CSS -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+        <!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ СЃРѕР±СЃС‚РІРµРЅРЅС‹С… СЃС‚РёР»РµР№ -->
+        <link rel="stylesheet" th:href="@{/css/styles.css}">
+
+        <title>РњРѕРё Р·Р°РєР°Р·С‹</title>
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-body">
+            <h1 class="text-center mb-4 text-primary">РњРѕРё Р·Р°РєР°Р·С‹</h1>
+
+            <!-- РЎРїРёСЃРѕРє Р·Р°РєР°Р·РѕРІ -->
+            <div th:each="order : ${orders}">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            Р—Р°РєР°Р· #<span th:text="${order.id}"></span>
+                            <span class="badge bg-secondary" th:text="${order.status}"></span>
+                        </h5>
+                        <p class="card-text">
+                            <strong>Р РµСЃС‚РѕСЂР°РЅ:</strong>
+                            <span th:text="${order.restaurantName}"></span>
+                            (<span th:text="${order.restaurantAddress}"></span>)
+                        </p>
+                        <p class="card-text">
+                            <strong>РЎСѓРјРјР°:</strong>
+                            <span th:text="${order.total}"></span> в‚Ѕ
+                        </p>
+                        <ul class="list-group">
+                            <li class="list-group-item" th:each="product : ${order.products}">
+                                <span th:text="${product.name}"></span> -
+                                <span th:text="${product.description}"></span> -
+<!--                                <span th:text="${product.price}"></span> в‚Ѕ-->
+                                <span th:text="${#numbers.formatDecimal(product.price, 1, 2)}"></span> в‚Ѕ
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="/menu" class="btn btn-outline-primary">
+                    в†ђ Р’РµСЂРЅСѓС‚СЊСЃСЏ РІ РјРµРЅСЋ
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ Bootstrap JS Рё Popper.js -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\resources\templates\phormAddingDish.html
+================================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+</body>
+</html>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\resources\application.properties
+================================================================================
+
+spring.application.name=diplom
+spring.jpa.generat-ddl=false
+spring.jpa.hibernate.ddl-auto=none
+
+spring.thymeleaf.prefix=classpath:/templates/
+spring.thymeleaf.suffix=.html
+spring.thymeleaf.cache=false
+
+
+# OAuth2
+jwt.secret=my-secret-key-which-is-very-long-and-secure
+
+# Spring Security
+spring.security.oauth2.resourceserver.jwt.secret-value=${jwt.secret}
+
+
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\resources\data.sql
+================================================================================
+
+
+-- Р—Р°РїРѕР»РЅРµРЅРёРµ С‚Р°Р±Р»РёС†С‹ РјРµРЅСЋ
+INSERT INTO menus (name, address, description) VALUES
+('РћСЃРЅРѕРІРЅРѕРµ РјРµРЅСЋ', 'СѓР». РџСѓС€РєРёРЅР°, 42', 'РњРµРЅСЋ СЂРµСЃС‚РѕСЂР°РЅР° "РС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РєСѓС…РЅСЏ"'),
+('РћСЃРЅРѕРІРЅРѕРµ РјРµРЅСЋ', 'СѓР». Р›РµРЅРёРЅР°, 25', 'РњРµРЅСЋ СЂРµСЃС‚РѕСЂР°РЅР° "РС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РєСѓС…РЅСЏ 2"');
+
+
+INSERT INTO menu_items (name, description, price, diameter, piece_count, dtype, menu_id) VALUES
+-- РџРёС†С†С‹
+('РњР°СЂРіР°СЂРёС‚Р°', 'РљР»Р°СЃСЃРёС‡РµСЃРєР°СЏ РёС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РїРёС†С†Р° СЃ С‚РѕРјР°С‚Р°РјРё Рё РјРѕС†Р°СЂРµР»Р»РѕР№', 9.99, 30, NULL, 'PIZZA', 1),
+('РџРµРїРїРµСЂРѕРЅРё', 'РћСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РєРѕР»Р±Р°СЃРєР°РјРё РїРµРїРїРµСЂРѕРЅРё', 11.99, 30, NULL, 'PIZZA', 1),
+('Р§РµС‚С‹СЂРµ СЃС‹СЂР°', 'РџРёС†С†Р° СЃ СЃС‹СЂР°РјРё РјРѕС†Р°СЂРµР»Р»Р°, РїР°СЂРјРµР·Р°РЅ, РґРѕСЂ Р±Р»СЋ Рё С‡РµРґРґРµСЂ', 12.99, 35, NULL, 'PIZZA', 1),
+('Р“Р°РІР°Р№СЃРєР°СЏ', 'РџРёС†С†Р° СЃ РІРµС‚С‡РёРЅРѕР№ Рё Р°РЅР°РЅР°СЃРѕРј', 10.99, 30, NULL, 'PIZZA', 1),
+('РљР°СЂР±РѕРЅР°СЂР°', 'РџРёС†С†Р° СЃ Р±РµРєРѕРЅРѕРј, СЃР»РёРІРѕС‡РЅС‹Рј СЃРѕСѓСЃРѕРј Рё СЏР№С†РѕРј', 13.99, 35, NULL, 'PIZZA', 1),
+('Р”РёР°Р±Р»Рѕ', 'РћС‡РµРЅСЊ РѕСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РїРµСЂС†РµРј С‡РёР»Рё Рё СЃР°Р»СЏРјРё', 12.99, 30, NULL, 'PIZZA', 1),
+('Р’РµРіРµС‚Р°СЂРёР°РЅСЃРєР°СЏ', 'РџРёС†С†Р° СЃ РѕРІРѕС‰Р°РјРё Рё РіСЂРёР±Р°РјРё', 10.99, 30, NULL, 'PIZZA', 1),
+('РњСЏСЃРЅР°СЏ', 'РџРёС†С†Р° СЃ РІРµС‚С‡РёРЅРѕР№, Р±РµРєРѕРЅРѕРј, РєРѕР»Р±Р°СЃРѕР№ Рё РїРµРїРїРµСЂРѕРЅРё', 14.99, 35, NULL, 'PIZZA', 1),
+('РњРѕСЂРµРїСЂРѕРґСѓРєС‚С‹', 'РџРёС†С†Р° СЃ РєСЂРµРІРµС‚РєР°РјРё, РјРёРґРёСЏРјРё Рё РєР°Р»СЊРјР°СЂР°РјРё', 15.99, 35, NULL, 'PIZZA', 1),
+('РўСЂСЋС„РµР»СЊРЅР°СЏ', 'Р­Р»РёС‚РЅР°СЏ РїРёС†С†Р° СЃ С‚СЂСЋС„РµР»СЊРЅС‹Рј РјР°СЃР»РѕРј Рё РїР°СЂРјРµР·Р°РЅРѕРј', 18.99, 30, NULL, 'PIZZA', 1),
+('РњР°СЂРіР°СЂРёС‚Р°', 'РљР»Р°СЃСЃРёС‡РµСЃРєР°СЏ РёС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РїРёС†С†Р° СЃ С‚РѕРјР°С‚Р°РјРё Рё РјРѕС†Р°СЂРµР»Р»РѕР№', 9.99, 30, NULL, 'PIZZA', 2),
+('РџРµРїРїРµСЂРѕРЅРё', 'РћСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РєРѕР»Р±Р°СЃРєР°РјРё РїРµРїРїРµСЂРѕРЅРё', 11.99, 30, NULL, 'PIZZA', 2),
+('Р§РµС‚С‹СЂРµ СЃС‹СЂР°', 'РџРёС†С†Р° СЃ СЃС‹СЂР°РјРё РјРѕС†Р°СЂРµР»Р»Р°, РїР°СЂРјРµР·Р°РЅ, РґРѕСЂ Р±Р»СЋ Рё С‡РµРґРґРµСЂ', 12.99, 35, NULL, 'PIZZA', 2),
+('Р“Р°РІР°Р№СЃРєР°СЏ', 'РџРёС†С†Р° СЃ РІРµС‚С‡РёРЅРѕР№ Рё Р°РЅР°РЅР°СЃРѕРј', 10.99, 30, NULL, 'PIZZA', 2),
+('РљР°СЂР±РѕРЅР°СЂР°', 'РџРёС†С†Р° СЃ Р±РµРєРѕРЅРѕРј, СЃР»РёРІРѕС‡РЅС‹Рј СЃРѕСѓСЃРѕРј Рё СЏР№С†РѕРј', 13.99, 35, NULL, 'PIZZA', 2),
+('Р”РёР°Р±Р»Рѕ', 'РћС‡РµРЅСЊ РѕСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РїРµСЂС†РµРј С‡РёР»Рё Рё СЃР°Р»СЏРјРё', 12.99, 30, NULL, 'PIZZA', 2),
+-- Р РѕР»Р»С‹
+('Р¤РёР»Р°РґРµР»СЊС„РёСЏ', 'Р РѕР»Р» СЃ Р»РѕСЃРѕСЃРµРј Рё СЃР»РёРІРѕС‡РЅС‹Рј СЃС‹СЂРѕРј', 14.99, NULL, 8, 'ROLL', 1),
+('РљР°Р»РёС„РѕСЂРЅРёСЏ', 'Р РѕР»Р» СЃ РєСЂР°Р±РѕРј Рё Р°РІРѕРєР°РґРѕ', 12.99, NULL, 6, 'ROLL', 1),
+('Р”СЂР°РєРѕРЅ', 'Р РѕР»Р» СЃ СѓРіСЂРµРј Рё Р°РІРѕРєР°РґРѕ', 16.99, NULL, 8, 'ROLL', 1),
+('РђР»СЏСЃРєР°', 'Р РѕР»Р» СЃ Р»РѕСЃРѕСЃРµРј, РѕРіСѓСЂС†РѕРј Рё Р°РІРѕРєР°РґРѕ', 13.99, NULL, 6, 'ROLL', 1),
+('Р‘РѕРЅРёС‚Рѕ', 'Р РѕР»Р» СЃ С‚СѓРЅС†РѕРј Рё СЃС‚СЂСѓР¶РєРѕР№ С‚СѓРЅС†Р°', 15.99, NULL, 8, 'ROLL', 1),
+('Р“РµР№С€Р°', 'Р РѕР»Р» СЃ РєСЂРµРІРµС‚РєРѕР№ Рё СЃРїР°Р№СЃРё СЃРѕСѓСЃРѕРј', 14.99, NULL, 6, 'ROLL', 1),
+('РўРѕРєРёРѕ', 'Р РѕР»Р» СЃ Р»РѕСЃРѕСЃРµРј, С‚СѓРЅС†РѕРј Рё Р°РІРѕРєР°РґРѕ', 17.99, NULL, 8, 'ROLL', 1),
+('РЎР°РєСѓСЂР°', 'Р РѕР»Р» СЃ РєСЂР°Р±РѕРј, РѕРіСѓСЂС†РѕРј Рё РёРєСЂРѕР№', 18.99, NULL, 6, 'ROLL', 1),
+('РЇСЃР°Р№', 'Р’РµРіРµС‚Р°СЂРёР°РЅСЃРєРёР№ СЂРѕР»Р» СЃ Р°РІРѕРєР°РґРѕ Рё РѕРіСѓСЂС†РѕРј', 11.99, NULL, 6, 'ROLL', 1),
+('РЈРЅР°РіРё', 'Р РѕР»Р» СЃ СѓРіСЂРµРј Рё РѕРіСѓСЂС†РѕРј', 19.99, NULL, 8, 'ROLL', 1);
+
+
+INSERT INTO roles (name) VALUES
+('CLIENT'),
+('STAFF'),
+('ADMIN');
+
+INSERT INTO users (username, password) VALUES
+('client', '$2a$10$evuEaL2E6QbMD8x3o1Bt0OGYOqoP936TI8juV5I4obiunO94HVuly'), -- РїР°СЂРѕР»СЊ РІРµР·РґРµ password
+('staff', '$2a$10$evuEaL2E6QbMD8x3o1Bt0OGYOqoP936TI8juV5I4obiunO94HVuly'),
+('admin', '$2a$10$evuEaL2E6QbMD8x3o1Bt0OGYOqoP936TI8juV5I4obiunO94HVuly');
+
+INSERT INTO users_roles (user_id, role_id) VALUES
+(1, 1),
+(2, 2),
+(3, 3);
+
+
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\resources\schema.sql
+================================================================================
+
+
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РјРµРЅСЋ
+--CREATE TABLE IF NOT EXISTS menus (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    name VARCHAR(255) NOT NULL,
+--    address VARCHAR(255),         -- РђРґСЂРµСЃ Р·Р°РІРµРґРµРЅРёСЏ
+--    description VARCHAR(500)
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЌР»РµРјРµРЅС‚РѕРІ РјРµРЅСЋ (MenuItem)
+--CREATE TABLE IF NOT EXISTS menu_items (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    name VARCHAR(255) NOT NULL,
+--    description VARCHAR(500),
+--    price DOUBLE NOT NULL,
+--    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+--    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, PASTA Рё С‚.Рґ.)
+--    menu_id BIGINT,               -- РЎСЃС‹Р»РєР° РЅР° РјРµРЅСЋ
+--    FOREIGN KEY (menu_id) REFERENCES menus(id)
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ Р·Р°РєР°Р·РѕРІ
+--CREATE TABLE IF NOT EXISTS orders (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    status VARCHAR(50) NOT NULL
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РїСЂРѕРґСѓРєС‚РѕРІ (РґР»СЏ Р·Р°РєР°Р·РѕРІ)
+--CREATE TABLE IF NOT EXISTS products (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, PASTA Рё С‚.Рґ.)
+--    name VARCHAR(255) NOT NULL,
+--    description VARCHAR(500),
+--    price DOUBLE NOT NULL,
+--    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+--    sauce_type VARCHAR(100),      -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїР°СЃС‚С‹
+--    status VARCHAR(50) NOT NULL,
+--    menu_id BIGINT                -- ID РјРµРЅСЋ, РёР· РєРѕС‚РѕСЂРѕРіРѕ РґРѕР±Р°РІР»РµРЅ РїСЂРѕРґСѓРєС‚
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЃРІСЏР·Рё Р·Р°РєР°Р·РѕРІ Рё РїСЂРѕРґСѓРєС‚РѕРІ
+--CREATE TABLE IF NOT EXISTS orders_products (
+--    order_id BIGINT,
+--    product_id BIGINT,
+--    FOREIGN KEY (order_id) REFERENCES orders(id),
+--    FOREIGN KEY (product_id) REFERENCES products(id)
+--);
+
+
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РјРµРЅСЋ
+CREATE TABLE IF NOT EXISTS menus (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    address VARCHAR(255),         -- РђРґСЂРµСЃ Р·Р°РІРµРґРµРЅРёСЏ
+    description VARCHAR(500)
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЌР»РµРјРµРЅС‚РѕРІ РјРµРЅСЋ (MenuItem)
+CREATE TABLE IF NOT EXISTS menu_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, ROLL Рё С‚.Рґ.)
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(500),
+    price DOUBLE NOT NULL,
+    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+    piece_count INT,              -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ СЂРѕР»Р»РѕРІ
+    menu_id BIGINT,               -- РЎСЃС‹Р»РєР° РЅР° РјРµРЅСЋ
+    FOREIGN KEY (menu_id) REFERENCES menus(id)
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ Р·Р°РєР°Р·РѕРІ
+CREATE TABLE IF NOT EXISTS orders (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    status VARCHAR(50) NOT NULL
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РїСЂРѕРґСѓРєС‚РѕРІ (РґР»СЏ Р·Р°РєР°Р·РѕРІ)
+CREATE TABLE IF NOT EXISTS products (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, ROLL Рё С‚.Рґ.)
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(500),
+    price DOUBLE NOT NULL,
+    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+    piece_count INT,              -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ СЂРѕР»Р»РѕРІ
+    status VARCHAR(50) NOT NULL,
+    menu_id BIGINT                -- ID РјРµРЅСЋ, РёР· РєРѕС‚РѕСЂРѕРіРѕ РґРѕР±Р°РІР»РµРЅ РїСЂРѕРґСѓРєС‚
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЃРІСЏР·Рё Р·Р°РєР°Р·РѕРІ Рё РїСЂРѕРґСѓРєС‚РѕРІ
+CREATE TABLE IF NOT EXISTS orders_products (
+    order_id BIGINT,
+    product_id BIGINT,
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+--- РўР°Р±Р»РёС†Р° РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
+ CREATE TABLE IF NOT EXISTS users (
+     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+     username VARCHAR(255) NOT NULL,
+     password VARCHAR(255) NOT NULL
+ );
+
+ -- РўР°Р±Р»РёС†Р° СЂРѕР»РµР№
+ CREATE TABLE IF NOT EXISTS roles (
+     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+     name VARCHAR(255) NOT NULL
+ );
+
+ -- РЎРІСЏР·СѓСЋС‰Р°СЏ С‚Р°Р±Р»РёС†Р° РґР»СЏ many-to-many
+CREATE TABLE users_roles (
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+    PRIMARY KEY (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (role_id) REFERENCES roles(id)
+);
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\test\java\com\example\diplom\DiplomApplicationTests.java
+================================================================================
+
+package com.example.diplom;
+
+import com.example.diplom.model.Dish;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class DiplomApplicationTests {
+
+	@Test
+	void contextLoads() {
+	}
+
+
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\target\classes\templates\fragments\cart-content.html
+================================================================================
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="cart-content(total)">
+    <div th:if="${not #lists.isEmpty(session.cart)}">
+        <div class="cart-item mb-3" th:each="item : ${session.cart}">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="me-3">
+                    <h5 th:text="${item.name}"></h5>
+                    <small class="text-muted" th:text="${item.description}"></small>
+                </div>
+                <div class="text-end">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-primary" th:text="'в‚Ѕ' + ${#numbers.formatDecimal(item.price, 1, 2)}"></span>
+                        <form th:action="@{/cart/remove}" method="post">
+                            <input type="hidden" name="menuItemId" th:value="${item.id}">
+                            <button type="submit" class="btn btn-danger btn-sm">
+                                &times;
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="total-price py-3 border-top">
+            <h5 class="d-flex justify-content-between">
+                <span>РС‚РѕРіРѕ:</span>
+                <span th:text="'в‚Ѕ' + ${total != null ? #numbers.formatDecimal(total, 1, 2) : '0.00'}"></span>
+            </h5>
+        </div>
+
+        <form th:action="@{/cart/checkout}" method="post">
+            <button type="submit" class="btn btn-success w-100">
+                РћС„РѕСЂРјРёС‚СЊ Р·Р°РєР°Р·
+            </button>
+        </form>
+    </div>
+</div>
+</body>
+</html>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\target\classes\templates\cart.html
+================================================================================
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+    <!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ СЃРѕР±СЃС‚РІРµРЅРЅС‹С… СЃС‚РёР»РµР№ -->
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-body">
+            <h1 class="text-center mb-4 text-primary">РљРѕСЂР·РёРЅР°</h1>
+
+            <!-- РЈРІРµРґРѕРјР»РµРЅРёСЏ -->
+            <div th:if="${success}" class="alert alert-success">
+                [[${success}]]
+            </div>
+            <div th:if="${error}" class="alert alert-danger">
+                [[${error}]]
+            </div>
+
+            <!-- РЎРїРёСЃРѕРє Р±Р»СЋРґ РІ РєРѕСЂР·РёРЅРµ -->
+            <ul class="list-group mb-4">
+                <li class="list-group-item d-flex justify-content-between align-items-center"
+                    th:each="item : ${cart}">
+                        <span>
+                            [[${item.name}]] - [[${item.price}]] в‚Ѕ
+                        </span>
+                    <form th:action="@{/cart/remove}" method="post">
+                        <input type="hidden" name="menuItemId" th:value="${item.id}">
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            РЈРґР°Р»РёС‚СЊ
+                        </button>
+                    </form>
+                </li>
+            </ul>
+
+            <!-- РС‚РѕРіРѕРІР°СЏ СЃСѓРјРјР° -->
+            <div class="text-end">
+                <h5>РС‚РѕРіРѕ: [[${total}]] в‚Ѕ</h5>
+            </div>
+
+            <!-- РљРЅРѕРїРєР° "РћС„РѕСЂРјРёС‚СЊ Р·Р°РєР°Р·" -->
+            <form th:action="@{/cart/checkout}" method="post" class="text-center mt-4">
+                <button type="submit" class="btn btn-success btn-lg">
+                    РћС„РѕСЂРјРёС‚СЊ Р·Р°РєР°Р·
+                </button>
+            </form>
+
+            <div class="text-center mt-4">
+                <a href="/" class="btn btn-outline-primary">
+                    в†ђ РќР° РіР»Р°РІРЅСѓСЋ
+                </a>
+                <a href="/menu" class="btn btn-outline-success ms-2">
+                    Р’РµСЂРЅСѓС‚СЊСЃСЏ РІ РјРµРЅСЋ в†’
+                </a>
+            </div>
+
+
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\target\classes\templates\index.html
+================================================================================
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+    <!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ СЃРѕР±СЃС‚РІРµРЅРЅС‹С… СЃС‚РёР»РµР№ -->
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+
+    <title>Р“Р»Р°РІРЅР°СЏ СЃС‚СЂР°РЅРёС†Р°</title>
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-body">
+            <h1 class="text-center mb-4 text-primary" th:text="${message}"></h1>
+
+            <!-- РЎРїРёСЃРѕРє РјРµРЅСЋ -->
+            <div class="list-group">
+                <a th:each="menu : ${menus}"
+                   th:href="@{/menu(mid=${menu.id})}"
+                   class="list-group-item list-group-item-action">
+                    <h5 th:text="${menu.name}"></h5>
+                    <p class="text-muted" th:text="${menu.description}"></p>
+                    <small class="text-muted" th:text="${menu.address}"></small>
+                </a>
+            </div>
+
+            <!-- РЎСЃС‹Р»РєР° РЅР° СЃС‚СЂР°РЅРёС†Сѓ РјРµРЅСЋ -->
+            <div class="text-center mt-4">
+                <a href="/menu" class="btn btn-outline-primary">
+                    РџРѕСЃРјРѕС‚СЂРµС‚СЊ РјРµРЅСЋ в†’-->
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ Bootstrap JS Рё Popper.js -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\target\classes\templates\login.html
+================================================================================
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Login</title>
+</head>
+<body>
+<form th:action="@{/login}" method="post">
+  <input type="text" name="username" placeholder="Username"/>
+  <input type="password" name="password" placeholder="Password"/>
+  <button type="submit">Login</button>
+</form>
+</body>
+</html>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\target\classes\templates\logout.html
+================================================================================
+
+<!-- Р’ РІР°С€РµРј HTML-С€Р°Р±Р»РѕРЅРµ -->
+<form th:action="@{/logout}" method="post" xmlns:th="http://www.w3.org/1999/xhtml">
+    <input type="submit" value="Р’С‹Р№С‚Рё">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+</form>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\target\classes\templates\menu.html
+================================================================================
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <title>РњРµРЅСЋ</title>
+</head>
+<body class="bg-light">
+
+<!-- РРєРѕРЅРєР° РєРѕСЂР·РёРЅС‹ -->
+<div class="cart-icon-wrapper">
+    <button class="btn btn-primary cart-icon" onclick="toggleCart()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-cart" viewBox="0 0 16 16">
+            <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5M3.102 4l1.313 7h8.17l1.313-7zM5 14a1 1 0 1 1 0 2 1 1 0 0 1 0-2m5 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2m-5 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2m5 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/>
+        </svg>
+        <span class="badge bg-danger" id="cart-counter" th:text="${session.cart != null ? #lists.size(session.cart) : 0}">0</span>
+    </button>
+</div>
+
+<!-- Р‘РѕРєРѕРІР°СЏ РїР°РЅРµР»СЊ РєРѕСЂР·РёРЅС‹ -->
+<div class="cart-sidebar" id="cart-sidebar">
+    <div class="cart-header">
+        <h4>Р’Р°С€Р° РєРѕСЂР·РёРЅР°</h4>
+        <button class="btn btn-close" onclick="toggleCart()"></button>
+    </div>
+    <div class="cart-body">
+        <!-- РЈРІРµРґРѕРјР»РµРЅРёСЏ -->
+        <div th:if="${success}" class="alert alert-success">
+            [[${success}]]
+        </div>
+        <div th:if="${error}" class="alert alert-danger">
+            [[${error}]]
+        </div>
+
+        <!-- РЎРѕРґРµСЂР¶РёРјРѕРµ РєРѕСЂР·РёРЅС‹ -->
+        <div th:replace="~{fragments/cart-content :: cart-content(total=${total})}"></div>
+    </div>
+</div>
+
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-body">
+            <h1 class="text-center mb-4 text-primary">РќР°С€Рµ РјРµРЅСЋ</h1>
+
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                <div class="col" th:each="menuItem : ${menuItems}">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title" th:text="${menuItem.name}"></h5>
+                            <p class="card-text text-muted" th:text="${menuItem.description}"></p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-success" th:text="'в‚Ѕ' + ${#numbers.formatDecimal(menuItem.price, 1, 2)}"></span>
+                                <span th:if="${menuItem instanceof T(com.example.diplom.model.PizzaMenuItem)}"
+                                      class="badge bg-info"
+                                      th:text="'Р”РёР°РјРµС‚СЂ: ' + ${menuItem.diameter} + 'СЃРј'">
+                                    </span>
+                                <span th:if="${menuItem instanceof T(com.example.diplom.model.RollMenuItem)}"
+                                      class="badge bg-warning"
+                                      th:text="'РљСѓСЃРѕС‡РєРѕРІ: ' + ${menuItem.pieceCount}">
+                                    </span>
+                            </div>
+                            <!-- РљРЅРѕРїРєР° "Р’ РєРѕСЂР·РёРЅСѓ" -->
+                            <form th:action="@{/cart/add}" method="post">
+                                <input type="hidden" name="menuItemId" th:value="${menuItem.id}">
+                                <input type="hidden" name="menuId" th:value="${menuItem.menu.id}">
+                                <button type="submit" class="btn btn-primary w-100">Р’ РєРѕСЂР·РёРЅСѓ</button>
+                            </form>
+                            <!-- Р¤РѕСЂРјР° СѓРґР°Р»РµРЅРёСЏ С‚РѕРІР°СЂР° РёР· РєРѕСЂР·РёРЅС‹ -->
+                            <!-- РџСЂРѕРІРµСЂСЏРµРј, РµСЃС‚СЊ Р»Рё С‚РѕРІР°СЂ РІ РєРѕСЂР·РёРЅРµ -->
+                            <div th:if="${#lists.contains(session.cart.![id], menuItem.id)}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <form th:action="@{/cart/remove}" method="post">
+                                        <input type="hidden" name="menuItemId" th:value="${menuItem.id}">
+                                        <input type="hidden" name="menuId" th:value="${menuItem.menu.id}">
+                                        <button type="submit" class="btn btn-danger btn-sm">
+                                            РЈРґР°Р»РёС‚СЊ РёР· РєРѕСЂР·РёРЅС‹
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="/" class="btn btn-outline-primary">
+                    в†ђ РќР° РіР»Р°РІРЅСѓСЋ
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ Bootstrap JS Рё Popper.js -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- РЎРєСЂРёРїС‚ РґР»СЏ РєРѕСЂР·РёРЅС‹ -->
+<script>
+    function toggleCart() {
+        const sidebar = document.getElementById('cart-sidebar');
+        sidebar.classList.toggle('active');
+
+        // Р”РѕР±Р°РІР»СЏРµРј Р·Р°С‚РµРјРЅРµРЅРёРµ С„РѕРЅР°
+        const overlay = document.createElement('div');
+        overlay.className = 'cart-overlay';
+        overlay.onclick = toggleCart;
+
+        if(sidebar.classList.contains('active')) {
+            document.body.appendChild(overlay);
+        } else {
+            document.querySelector('.cart-overlay')?.remove();
+        }
+    }
+</script>
+</body>
+</html>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\target\classes\templates\orders.html
+================================================================================
+
+<!DOCTYPE html>
+        <html xmlns:th="http://www.thymeleaf.org">
+        <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ Bootstrap CSS -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+        <!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ СЃРѕР±СЃС‚РІРµРЅРЅС‹С… СЃС‚РёР»РµР№ -->
+        <link rel="stylesheet" th:href="@{/css/styles.css}">
+
+        <title>РњРѕРё Р·Р°РєР°Р·С‹</title>
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-body">
+            <h1 class="text-center mb-4 text-primary">РњРѕРё Р·Р°РєР°Р·С‹</h1>
+
+            <!-- РЎРїРёСЃРѕРє Р·Р°РєР°Р·РѕРІ -->
+            <div th:each="order : ${orders}">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            Р—Р°РєР°Р· #<span th:text="${order.id}"></span>
+                            <span class="badge bg-secondary" th:text="${order.status}"></span>
+                        </h5>
+                        <p class="card-text">
+                            <strong>Р РµСЃС‚РѕСЂР°РЅ:</strong>
+                            <span th:text="${order.restaurantName}"></span>
+                            (<span th:text="${order.restaurantAddress}"></span>)
+                        </p>
+                        <p class="card-text">
+                            <strong>РЎСѓРјРјР°:</strong>
+                            <span th:text="${order.total}"></span> в‚Ѕ
+                        </p>
+                        <ul class="list-group">
+                            <li class="list-group-item" th:each="product : ${order.products}">
+                                <span th:text="${product.name}"></span> -
+                                <span th:text="${product.description}"></span> -
+<!--                                <span th:text="${product.price}"></span> в‚Ѕ-->
+                                <span th:text="${#numbers.formatDecimal(product.price, 1, 2)}"></span> в‚Ѕ
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="/menu" class="btn btn-outline-primary">
+                    в†ђ Р’РµСЂРЅСѓС‚СЊСЃСЏ РІ РјРµРЅСЋ
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- РџРѕРґРєР»СЋС‡РµРЅРёРµ Bootstrap JS Рё Popper.js -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\target\classes\templates\phormAddingDish.html
+================================================================================
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+</body>
+</html>
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\target\classes\application.properties
+================================================================================
+
+spring.application.name=diplom
+spring.jpa.generat-ddl=false
+spring.jpa.hibernate.ddl-auto=none
+
+spring.thymeleaf.prefix=classpath:/templates/
+spring.thymeleaf.suffix=.html
+spring.thymeleaf.cache=false
+
+
+# OAuth2
+jwt.secret=my-secret-key-which-is-very-long-and-secure
+
+# Spring Security
+spring.security.oauth2.resourceserver.jwt.secret-value=${jwt.secret}
+
+
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\target\classes\data.sql
+================================================================================
+
+
+-- Р—Р°РїРѕР»РЅРµРЅРёРµ С‚Р°Р±Р»РёС†С‹ РјРµРЅСЋ
+INSERT INTO menus (name, address, description) VALUES
+('РћСЃРЅРѕРІРЅРѕРµ РјРµРЅСЋ', 'СѓР». РџСѓС€РєРёРЅР°, 42', 'РњРµРЅСЋ СЂРµСЃС‚РѕСЂР°РЅР° "РС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РєСѓС…РЅСЏ"'),
+('РћСЃРЅРѕРІРЅРѕРµ РјРµРЅСЋ', 'СѓР». Р›РµРЅРёРЅР°, 25', 'РњРµРЅСЋ СЂРµСЃС‚РѕСЂР°РЅР° "РС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РєСѓС…РЅСЏ 2"');
+
+
+INSERT INTO menu_items (name, description, price, diameter, piece_count, dtype, menu_id) VALUES
+-- РџРёС†С†С‹
+('РњР°СЂРіР°СЂРёС‚Р°', 'РљР»Р°СЃСЃРёС‡РµСЃРєР°СЏ РёС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РїРёС†С†Р° СЃ С‚РѕРјР°С‚Р°РјРё Рё РјРѕС†Р°СЂРµР»Р»РѕР№', 9.99, 30, NULL, 'PIZZA', 1),
+('РџРµРїРїРµСЂРѕРЅРё', 'РћСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РєРѕР»Р±Р°СЃРєР°РјРё РїРµРїРїРµСЂРѕРЅРё', 11.99, 30, NULL, 'PIZZA', 1),
+('Р§РµС‚С‹СЂРµ СЃС‹СЂР°', 'РџРёС†С†Р° СЃ СЃС‹СЂР°РјРё РјРѕС†Р°СЂРµР»Р»Р°, РїР°СЂРјРµР·Р°РЅ, РґРѕСЂ Р±Р»СЋ Рё С‡РµРґРґРµСЂ', 12.99, 35, NULL, 'PIZZA', 1),
+('Р“Р°РІР°Р№СЃРєР°СЏ', 'РџРёС†С†Р° СЃ РІРµС‚С‡РёРЅРѕР№ Рё Р°РЅР°РЅР°СЃРѕРј', 10.99, 30, NULL, 'PIZZA', 1),
+('РљР°СЂР±РѕРЅР°СЂР°', 'РџРёС†С†Р° СЃ Р±РµРєРѕРЅРѕРј, СЃР»РёРІРѕС‡РЅС‹Рј СЃРѕСѓСЃРѕРј Рё СЏР№С†РѕРј', 13.99, 35, NULL, 'PIZZA', 1),
+('Р”РёР°Р±Р»Рѕ', 'РћС‡РµРЅСЊ РѕСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РїРµСЂС†РµРј С‡РёР»Рё Рё СЃР°Р»СЏРјРё', 12.99, 30, NULL, 'PIZZA', 1),
+('Р’РµРіРµС‚Р°СЂРёР°РЅСЃРєР°СЏ', 'РџРёС†С†Р° СЃ РѕРІРѕС‰Р°РјРё Рё РіСЂРёР±Р°РјРё', 10.99, 30, NULL, 'PIZZA', 1),
+('РњСЏСЃРЅР°СЏ', 'РџРёС†С†Р° СЃ РІРµС‚С‡РёРЅРѕР№, Р±РµРєРѕРЅРѕРј, РєРѕР»Р±Р°СЃРѕР№ Рё РїРµРїРїРµСЂРѕРЅРё', 14.99, 35, NULL, 'PIZZA', 1),
+('РњРѕСЂРµРїСЂРѕРґСѓРєС‚С‹', 'РџРёС†С†Р° СЃ РєСЂРµРІРµС‚РєР°РјРё, РјРёРґРёСЏРјРё Рё РєР°Р»СЊРјР°СЂР°РјРё', 15.99, 35, NULL, 'PIZZA', 1),
+('РўСЂСЋС„РµР»СЊРЅР°СЏ', 'Р­Р»РёС‚РЅР°СЏ РїРёС†С†Р° СЃ С‚СЂСЋС„РµР»СЊРЅС‹Рј РјР°СЃР»РѕРј Рё РїР°СЂРјРµР·Р°РЅРѕРј', 18.99, 30, NULL, 'PIZZA', 1),
+('РњР°СЂРіР°СЂРёС‚Р°', 'РљР»Р°СЃСЃРёС‡РµСЃРєР°СЏ РёС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РїРёС†С†Р° СЃ С‚РѕРјР°С‚Р°РјРё Рё РјРѕС†Р°СЂРµР»Р»РѕР№', 9.99, 30, NULL, 'PIZZA', 2),
+('РџРµРїРїРµСЂРѕРЅРё', 'РћСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РєРѕР»Р±Р°СЃРєР°РјРё РїРµРїРїРµСЂРѕРЅРё', 11.99, 30, NULL, 'PIZZA', 2),
+('Р§РµС‚С‹СЂРµ СЃС‹СЂР°', 'РџРёС†С†Р° СЃ СЃС‹СЂР°РјРё РјРѕС†Р°СЂРµР»Р»Р°, РїР°СЂРјРµР·Р°РЅ, РґРѕСЂ Р±Р»СЋ Рё С‡РµРґРґРµСЂ', 12.99, 35, NULL, 'PIZZA', 2),
+('Р“Р°РІР°Р№СЃРєР°СЏ', 'РџРёС†С†Р° СЃ РІРµС‚С‡РёРЅРѕР№ Рё Р°РЅР°РЅР°СЃРѕРј', 10.99, 30, NULL, 'PIZZA', 2),
+('РљР°СЂР±РѕРЅР°СЂР°', 'РџРёС†С†Р° СЃ Р±РµРєРѕРЅРѕРј, СЃР»РёРІРѕС‡РЅС‹Рј СЃРѕСѓСЃРѕРј Рё СЏР№С†РѕРј', 13.99, 35, NULL, 'PIZZA', 2),
+('Р”РёР°Р±Р»Рѕ', 'РћС‡РµРЅСЊ РѕСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РїРµСЂС†РµРј С‡РёР»Рё Рё СЃР°Р»СЏРјРё', 12.99, 30, NULL, 'PIZZA', 2),
+-- Р РѕР»Р»С‹
+('Р¤РёР»Р°РґРµР»СЊС„РёСЏ', 'Р РѕР»Р» СЃ Р»РѕСЃРѕСЃРµРј Рё СЃР»РёРІРѕС‡РЅС‹Рј СЃС‹СЂРѕРј', 14.99, NULL, 8, 'ROLL', 1),
+('РљР°Р»РёС„РѕСЂРЅРёСЏ', 'Р РѕР»Р» СЃ РєСЂР°Р±РѕРј Рё Р°РІРѕРєР°РґРѕ', 12.99, NULL, 6, 'ROLL', 1),
+('Р”СЂР°РєРѕРЅ', 'Р РѕР»Р» СЃ СѓРіСЂРµРј Рё Р°РІРѕРєР°РґРѕ', 16.99, NULL, 8, 'ROLL', 1),
+('РђР»СЏСЃРєР°', 'Р РѕР»Р» СЃ Р»РѕСЃРѕСЃРµРј, РѕРіСѓСЂС†РѕРј Рё Р°РІРѕРєР°РґРѕ', 13.99, NULL, 6, 'ROLL', 1),
+('Р‘РѕРЅРёС‚Рѕ', 'Р РѕР»Р» СЃ С‚СѓРЅС†РѕРј Рё СЃС‚СЂСѓР¶РєРѕР№ С‚СѓРЅС†Р°', 15.99, NULL, 8, 'ROLL', 1),
+('Р“РµР№С€Р°', 'Р РѕР»Р» СЃ РєСЂРµРІРµС‚РєРѕР№ Рё СЃРїР°Р№СЃРё СЃРѕСѓСЃРѕРј', 14.99, NULL, 6, 'ROLL', 1),
+('РўРѕРєРёРѕ', 'Р РѕР»Р» СЃ Р»РѕСЃРѕСЃРµРј, С‚СѓРЅС†РѕРј Рё Р°РІРѕРєР°РґРѕ', 17.99, NULL, 8, 'ROLL', 1),
+('РЎР°РєСѓСЂР°', 'Р РѕР»Р» СЃ РєСЂР°Р±РѕРј, РѕРіСѓСЂС†РѕРј Рё РёРєСЂРѕР№', 18.99, NULL, 6, 'ROLL', 1),
+('РЇСЃР°Р№', 'Р’РµРіРµС‚Р°СЂРёР°РЅСЃРєРёР№ СЂРѕР»Р» СЃ Р°РІРѕРєР°РґРѕ Рё РѕРіСѓСЂС†РѕРј', 11.99, NULL, 6, 'ROLL', 1),
+('РЈРЅР°РіРё', 'Р РѕР»Р» СЃ СѓРіСЂРµРј Рё РѕРіСѓСЂС†РѕРј', 19.99, NULL, 8, 'ROLL', 1);
+
+
+INSERT INTO roles (name) VALUES
+('CLIENT'),
+('STAFF'),
+('ADMIN');
+
+INSERT INTO users (username, password) VALUES
+('client', '$2a$10$evuEaL2E6QbMD8x3o1Bt0OGYOqoP936TI8juV5I4obiunO94HVuly'), -- РїР°СЂРѕР»СЊ РІРµР·РґРµ password
+('staff', '$2a$10$evuEaL2E6QbMD8x3o1Bt0OGYOqoP936TI8juV5I4obiunO94HVuly'),
+('admin', '$2a$10$evuEaL2E6QbMD8x3o1Bt0OGYOqoP936TI8juV5I4obiunO94HVuly');
+
+INSERT INTO users_roles (user_id, role_id) VALUES
+(1, 1),
+(2, 2),
+(3, 3);
+
+
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\target\classes\schema.sql
+================================================================================
+
+
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РјРµРЅСЋ
+--CREATE TABLE IF NOT EXISTS menus (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    name VARCHAR(255) NOT NULL,
+--    address VARCHAR(255),         -- РђРґСЂРµСЃ Р·Р°РІРµРґРµРЅРёСЏ
+--    description VARCHAR(500)
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЌР»РµРјРµРЅС‚РѕРІ РјРµРЅСЋ (MenuItem)
+--CREATE TABLE IF NOT EXISTS menu_items (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    name VARCHAR(255) NOT NULL,
+--    description VARCHAR(500),
+--    price DOUBLE NOT NULL,
+--    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+--    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, PASTA Рё С‚.Рґ.)
+--    menu_id BIGINT,               -- РЎСЃС‹Р»РєР° РЅР° РјРµРЅСЋ
+--    FOREIGN KEY (menu_id) REFERENCES menus(id)
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ Р·Р°РєР°Р·РѕРІ
+--CREATE TABLE IF NOT EXISTS orders (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    status VARCHAR(50) NOT NULL
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РїСЂРѕРґСѓРєС‚РѕРІ (РґР»СЏ Р·Р°РєР°Р·РѕРІ)
+--CREATE TABLE IF NOT EXISTS products (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, PASTA Рё С‚.Рґ.)
+--    name VARCHAR(255) NOT NULL,
+--    description VARCHAR(500),
+--    price DOUBLE NOT NULL,
+--    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+--    sauce_type VARCHAR(100),      -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїР°СЃС‚С‹
+--    status VARCHAR(50) NOT NULL,
+--    menu_id BIGINT                -- ID РјРµРЅСЋ, РёР· РєРѕС‚РѕСЂРѕРіРѕ РґРѕР±Р°РІР»РµРЅ РїСЂРѕРґСѓРєС‚
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЃРІСЏР·Рё Р·Р°РєР°Р·РѕРІ Рё РїСЂРѕРґСѓРєС‚РѕРІ
+--CREATE TABLE IF NOT EXISTS orders_products (
+--    order_id BIGINT,
+--    product_id BIGINT,
+--    FOREIGN KEY (order_id) REFERENCES orders(id),
+--    FOREIGN KEY (product_id) REFERENCES products(id)
+--);
+
+
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РјРµРЅСЋ
+CREATE TABLE IF NOT EXISTS menus (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    address VARCHAR(255),         -- РђРґСЂРµСЃ Р·Р°РІРµРґРµРЅРёСЏ
+    description VARCHAR(500)
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЌР»РµРјРµРЅС‚РѕРІ РјРµРЅСЋ (MenuItem)
+CREATE TABLE IF NOT EXISTS menu_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, ROLL Рё С‚.Рґ.)
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(500),
+    price DOUBLE NOT NULL,
+    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+    piece_count INT,              -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ СЂРѕР»Р»РѕРІ
+    menu_id BIGINT,               -- РЎСЃС‹Р»РєР° РЅР° РјРµРЅСЋ
+    FOREIGN KEY (menu_id) REFERENCES menus(id)
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ Р·Р°РєР°Р·РѕРІ
+CREATE TABLE IF NOT EXISTS orders (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    status VARCHAR(50) NOT NULL
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РїСЂРѕРґСѓРєС‚РѕРІ (РґР»СЏ Р·Р°РєР°Р·РѕРІ)
+CREATE TABLE IF NOT EXISTS products (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, ROLL Рё С‚.Рґ.)
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(500),
+    price DOUBLE NOT NULL,
+    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+    piece_count INT,              -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ СЂРѕР»Р»РѕРІ
+    status VARCHAR(50) NOT NULL,
+    menu_id BIGINT                -- ID РјРµРЅСЋ, РёР· РєРѕС‚РѕСЂРѕРіРѕ РґРѕР±Р°РІР»РµРЅ РїСЂРѕРґСѓРєС‚
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЃРІСЏР·Рё Р·Р°РєР°Р·РѕРІ Рё РїСЂРѕРґСѓРєС‚РѕРІ
+CREATE TABLE IF NOT EXISTS orders_products (
+    order_id BIGINT,
+    product_id BIGINT,
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+--- РўР°Р±Р»РёС†Р° РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
+ CREATE TABLE IF NOT EXISTS users (
+     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+     username VARCHAR(255) NOT NULL,
+     password VARCHAR(255) NOT NULL
+ );
+
+ -- РўР°Р±Р»РёС†Р° СЂРѕР»РµР№
+ CREATE TABLE IF NOT EXISTS roles (
+     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+     name VARCHAR(255) NOT NULL
+ );
+
+ -- РЎРІСЏР·СѓСЋС‰Р°СЏ С‚Р°Р±Р»РёС†Р° РґР»СЏ many-to-many
+CREATE TABLE users_roles (
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+    PRIMARY KEY (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (role_id) REFERENCES roles(id)
+);
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\pom.xml
+================================================================================
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.4.2</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>com.example</groupId>
+	<artifactId>diplom</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>diplom</name>
+	<description>Demo project for Spring Boot</description>
+	<url/>
+	<licenses>
+		<license/>
+	</licenses>
+	<developers>
+		<developer/>
+	</developers>
+	<scm>
+		<connection/>
+		<developerConnection/>
+		<tag/>
+		<url/>
+	</scm>
+	<properties>
+		<java.version>17</java.version>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jdbc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<!-- Spring Security OAuth2 -->
+
+		<dependency>
+			<groupId>org.thymeleaf.extras</groupId>
+			<artifactId>thymeleaf-extras-springsecurity6</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.auth0</groupId>
+			<artifactId>java-jwt</artifactId>
+			<version>4.4.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

@@ -95,3 +95,21 @@
 .auth-section button {
     vertical-align: top;
 }
+
+.auth-section {
+    position: fixed;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.auth-section form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.auth-section input {
+    max-width: 120px;
+}
