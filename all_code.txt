@@ -1973,6 +1973,11 @@ public class ProductService {
         clone.setId(null); // РЎР±СЂР°СЃС‹РІР°РµРј ID РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕР№ Р·Р°РїРёСЃРё
         return productRepository.save(clone);
     }
+
+
+    public boolean existsById(Long id) {
+        return productRepository.existsById(id);
+    }
 }
 
 ================================================================================
@@ -2136,7 +2141,26 @@ public class DiplomApplication {
 </head>
 <body class="bg-light">
 
-<div class="container mt-5">
+<!-- Р‘Р»РѕРє Р°РІС‚РѕСЂРёР·Р°С†РёРё>-->
+<div class="auth-section" style="position: absolute; top: 20px; left: 20px;">
+    <div th:if="${#authorization.expression('isAuthenticated()')}">
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+                Р’С‹Р№С‚Рё ([[${#authentication.principal.username}]])
+            </button>
+        </form>
+    </div>
+    <div th:unless="${#authorization.expression('isAuthenticated()')}">
+        <form th:action="@{/login}" method="post" class="d-flex gap-2">
+            <input type="text" name="username" placeholder="Р›РѕРіРёРЅ" class="form-control form-control-sm">
+            <input type="password" name="password" placeholder="РџР°СЂРѕР»СЊ" class="form-control form-control-sm">
+            <button type="submit" class="btn btn-primary btn-sm">Р’РѕР№С‚Рё</button>
+        </form>
+        <div th:if="${param.error}" class="text-danger mt-1">РћС€РёР±РєР° Р°РІС‚РѕСЂРёР·Р°С†РёРё!</div>
+    </div>
+</div>
+
+<div class="container mt-5" style="padding-top: 120px;">
     <div class="card shadow">
         <div class="card-body">
             <h1 class="text-center mb-4 text-primary" th:text="${message}"></h1>
@@ -2209,7 +2233,24 @@ public class DiplomApplication {
     <title>РњРµРЅСЋ</title>
 </head>
 <body class="bg-light">
-
+<!-- Р‘Р»РѕРє Р°РІС‚РѕСЂРёР·Р°С†РёРё -->
+<div class="auth-section" style="position: absolute; top: 20px; left: 20px; z-index: 1000;">
+        <div th:if="${#authorization.expression('isAuthenticated()')}">
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    Р’С‹Р№С‚Рё ([[${#authentication.principal.username}]])
+                </button>
+            </form>
+        </div>
+        <div th:unless="${#authorization.expression('isAuthenticated()')}">
+            <form th:action="@{/login}" method="post" class="d-flex gap-2">
+                <input type="text" name="username" placeholder="Р›РѕРіРёРЅ" class="form-control form-control-sm">
+                <input type="password" name="password" placeholder="РџР°СЂРѕР»СЊ" class="form-control form-control-sm">
+                <button type="submit" class="btn btn-primary btn-sm">Р’РѕР№С‚Рё</button>
+            </form>
+            <div th:if="${param.error}" class="text-danger mt-1">РћС€РёР±РєР° Р°РІС‚РѕСЂРёР·Р°С†РёРё!</div>
+        </div>
+</div>
 <!-- РРєРѕРЅРєР° РєРѕСЂР·РёРЅС‹ -->
 <div class="cart-icon-wrapper">
     <button class="btn btn-primary cart-icon" onclick="toggleCart()">
@@ -2240,7 +2281,7 @@ public class DiplomApplication {
     </div>
 </div>
 
-<div class="container mt-5">
+<div class="container mt-5" style="padding-top: 120px;">
     <div class="card shadow">
         <div class="card-body">
             <h1 class="text-center mb-4 text-primary">РќР°С€Рµ РјРµРЅСЋ</h1>
@@ -2338,7 +2379,26 @@ public class DiplomApplication {
         <title>РњРѕРё Р·Р°РєР°Р·С‹</title>
 </head>
 <body class="bg-light">
-<div class="container mt-5">
+<!-- Р‘Р»РѕРє Р°РІС‚РѕСЂРёР·Р°С†РёРё -->
+<div class="auth-section" style="position: absolute; top: 20px; left: 20px;">
+    <div th:if="${#authorization.expression('isAuthenticated()')}">
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+                Р’С‹Р№С‚Рё ([[${#authentication.principal.username}]])
+            </button>
+        </form>
+    </div>
+    <div th:unless="${#authorization.expression('isAuthenticated()')}">
+        <form th:action="@{/login}" method="post" class="d-flex gap-2">
+            <input type="text" name="username" placeholder="Р›РѕРіРёРЅ" class="form-control form-control-sm">
+            <input type="password" name="password" placeholder="РџР°СЂРѕР»СЊ" class="form-control form-control-sm">
+            <button type="submit" class="btn btn-primary btn-sm">Р’РѕР№С‚Рё</button>
+        </form>
+        <div th:if="${param.error}" class="text-danger mt-1">РћС€РёР±РєР° Р°РІС‚РѕСЂРёР·Р°С†РёРё!</div>
+    </div>
+</div>
+<!-- РћСЃРЅРѕРІРЅРѕР№ РєРѕРЅС‚РµР№РЅРµСЂ -->
+<div class="container mt-5 " style="padding-top: 120px;">
     <div class="card shadow">
         <div class="card-body">
             <h1 class="text-center mb-4 text-primary">РњРѕРё Р·Р°РєР°Р·С‹</h1>
@@ -2611,18 +2671,273 @@ CREATE TABLE users_roles (
 
 package com.example.diplom;
 
-import com.example.diplom.model.Dish;
+import com.example.diplom.model.Menu;
+import com.example.diplom.repositories.MenuRepository;
+import com.example.diplom.repositories.OrderRepository;
+import com.example.diplom.repositories.ProductRepository;
+import com.example.diplom.service.MenuService;
+import com.example.diplom.service.OrderService;
+import com.example.diplom.service.ProductService;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.web.servlet.MockMvc;
+import com.example.diplom.model.*;
+import org.springframework.security.test.context.support.WithMockUser;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
-class DiplomApplicationTests {
-
-	@Test
-	void contextLoads() {
-	}
 
 
+
+	@SpringBootTest
+	@AutoConfigureMockMvc
+	class DiplomApplicationTests {
+
+
+
+		@Autowired
+		private OrderRepository orderRepository;
+
+		@Autowired
+		private OrderService orderService;
+
+		@Autowired
+		private MockMvc mockMvc;
+
+		@Autowired
+		private MenuService menuService;
+
+		@Autowired
+		private ProductService productService;
+
+		@Autowired
+		private MenuRepository menuRepository;
+
+		@Autowired
+		private ProductRepository productRepository;
+
+		@Test
+		void contextLoads() {
+			// РџСЂРѕРІРµСЂРєР° Р·Р°РіСЂСѓР·РєРё РєРѕРЅС‚РµРєСЃС‚Р°
+		}
+
+
+		@Test
+		void testMenuService() {
+			Menu menu = new Menu();
+			menu.setName("Test Menu");
+			Menu savedMenu = menuService.createMenu(menu);
+
+			assertNotNull(savedMenu.getId());
+			assertEquals("Test Menu", savedMenu.getName());
+		}
+
+
+
+		@Test
+		@WithMockUser(roles = "ADMIN")
+		void testAdminAccess() throws Exception {
+			mockMvc.perform(get("/orders"))
+					.andExpect(status().isOk());
+		}
+
+		@Test
+		@WithMockUser(roles = "STAFF")
+		void testStaffAccess() throws Exception {
+			mockMvc.perform(get("/cart/all"))
+					.andExpect(status().isOk());
+		}
+
+		@Test
+		void testProductService() {
+			Pizza product = new Pizza();
+			product.setName("Test Pizza");
+			product.setPrice(15.99);
+			product.setDiameter(30);  // РЈРЅРёРєР°Р»СЊРЅРѕРµ РїРѕР»Рµ РґР»СЏ Pizza
+
+			Product savedProduct = productService.createProduct(product);
+
+			assertNotNull(savedProduct.getId());
+			assertTrue(productService.existsById(savedProduct.getId()));
+		}
+
+		@Test
+		void testRepositoryLayer() {
+			Menu menu = new Menu();
+			menu.setName("Test Menu");
+			Menu savedMenu = menuRepository.save(menu);
+			assertNotNull(menuRepository.findById(menu.getId()));
+
+			Product product = productRepository.save(new Pizza("Test", "Desc", 10.0, 25));
+			assertTrue(productRepository.existsById(product.getId()));
+		}
+
+}
+
+
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\test\java\com\example\diplom\ExceptionTest.java
+================================================================================
+
+package com.example.diplom;
+
+import com.example.diplom.repositories.OrderRepository;
+import com.example.diplom.service.OrderService;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
+
+// ExceptionTest.java
+@ExtendWith(MockitoExtension.class)
+public class ExceptionTest {
+    @Mock
+    private OrderRepository orderRepository;
+
+    @InjectMocks
+    private OrderService orderService;
+
+    @Test
+    void testOrderNotFoundException() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.empty());
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> orderService.getOrderById(1L));
+
+        assertEquals("Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ", exception.getMessage());
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\test\java\com\example\diplom\MenuItemTest.java
+================================================================================
+
+package com.example.diplom;
+
+import com.example.diplom.model.PizzaMenuItem;
+import com.example.diplom.model.RollMenuItem;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+@ExtendWith(MockitoExtension.class)
+public class MenuItemTest {
+    @Test
+    void testPizzaMenuItem() {
+        PizzaMenuItem pizza = new PizzaMenuItem();
+        pizza.setDiameter(25);
+        assertEquals(25, pizza.getDiameter());
+    }
+
+    @Test
+    void testRollMenuItem() {
+        RollMenuItem roll = new RollMenuItem();
+        roll.setPieceCount(8);
+        assertEquals(8, roll.getPieceCount());
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\test\java\com\example\diplom\OrderServiceUnitTest.java
+================================================================================
+
+package com.example.diplom;
+
+import com.example.diplom.model.Order;
+import com.example.diplom.repositories.OrderRepository;
+import com.example.diplom.service.OrderService;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import java.util.Optional;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+public class OrderServiceUnitTest {
+    @Mock
+    private OrderRepository orderRepository;
+
+    @InjectMocks
+    private OrderService orderService;
+
+    @Test
+    void testCreateOrder() {
+        Order order = new Order();
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+
+        Order result = orderService.createOrder(order);
+        assertNotNull(result);
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    void testGetNonExistingOrder() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> {
+            orderService.getOrderById(1L);
+        });
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\test\java\com\example\diplom\ProductServiceTest.java
+================================================================================
+
+package com.example.diplom;
+
+import com.example.diplom.model.Pizza;
+import com.example.diplom.model.Product;
+import com.example.diplom.repositories.ProductRepository;
+import com.example.diplom.service.ProductService;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+// ProductServiceTest.java
+@ExtendWith(MockitoExtension.class)
+public class ProductServiceTest {
+    @Mock
+    private ProductRepository productRepository;
+
+    @InjectMocks
+    private ProductService productService;
+
+    @Test
+    void testCreateProduct() {
+        Product product = new Pizza();
+        when(productRepository.save(any())).thenReturn(product);
+
+        Product result = productService.createProduct(product);
+        assertNotNull(result);
+        verify(productRepository).save(product);
+    }
 }
 
 ================================================================================
@@ -2765,7 +3080,26 @@ class DiplomApplicationTests {
 </head>
 <body class="bg-light">
 
-<div class="container mt-5">
+<!-- Р‘Р»РѕРє Р°РІС‚РѕСЂРёР·Р°С†РёРё>-->
+<div class="auth-section" style="position: absolute; top: 20px; left: 20px;">
+    <div th:if="${#authorization.expression('isAuthenticated()')}">
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+                Р’С‹Р№С‚Рё ([[${#authentication.principal.username}]])
+            </button>
+        </form>
+    </div>
+    <div th:unless="${#authorization.expression('isAuthenticated()')}">
+        <form th:action="@{/login}" method="post" class="d-flex gap-2">
+            <input type="text" name="username" placeholder="Р›РѕРіРёРЅ" class="form-control form-control-sm">
+            <input type="password" name="password" placeholder="РџР°СЂРѕР»СЊ" class="form-control form-control-sm">
+            <button type="submit" class="btn btn-primary btn-sm">Р’РѕР№С‚Рё</button>
+        </form>
+        <div th:if="${param.error}" class="text-danger mt-1">РћС€РёР±РєР° Р°РІС‚РѕСЂРёР·Р°С†РёРё!</div>
+    </div>
+</div>
+
+<div class="container mt-5" style="padding-top: 120px;">
     <div class="card shadow">
         <div class="card-body">
             <h1 class="text-center mb-4 text-primary" th:text="${message}"></h1>
@@ -2838,7 +3172,24 @@ class DiplomApplicationTests {
     <title>РњРµРЅСЋ</title>
 </head>
 <body class="bg-light">
-
+<!-- Р‘Р»РѕРє Р°РІС‚РѕСЂРёР·Р°С†РёРё -->
+<div class="auth-section" style="position: absolute; top: 20px; left: 20px; z-index: 1000;">
+        <div th:if="${#authorization.expression('isAuthenticated()')}">
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    Р’С‹Р№С‚Рё ([[${#authentication.principal.username}]])
+                </button>
+            </form>
+        </div>
+        <div th:unless="${#authorization.expression('isAuthenticated()')}">
+            <form th:action="@{/login}" method="post" class="d-flex gap-2">
+                <input type="text" name="username" placeholder="Р›РѕРіРёРЅ" class="form-control form-control-sm">
+                <input type="password" name="password" placeholder="РџР°СЂРѕР»СЊ" class="form-control form-control-sm">
+                <button type="submit" class="btn btn-primary btn-sm">Р’РѕР№С‚Рё</button>
+            </form>
+            <div th:if="${param.error}" class="text-danger mt-1">РћС€РёР±РєР° Р°РІС‚РѕСЂРёР·Р°С†РёРё!</div>
+        </div>
+</div>
 <!-- РРєРѕРЅРєР° РєРѕСЂР·РёРЅС‹ -->
 <div class="cart-icon-wrapper">
     <button class="btn btn-primary cart-icon" onclick="toggleCart()">
@@ -2869,7 +3220,7 @@ class DiplomApplicationTests {
     </div>
 </div>
 
-<div class="container mt-5">
+<div class="container mt-5" style="padding-top: 120px;">
     <div class="card shadow">
         <div class="card-body">
             <h1 class="text-center mb-4 text-primary">РќР°С€Рµ РјРµРЅСЋ</h1>
@@ -2967,7 +3318,26 @@ class DiplomApplicationTests {
         <title>РњРѕРё Р·Р°РєР°Р·С‹</title>
 </head>
 <body class="bg-light">
-<div class="container mt-5">
+<!-- Р‘Р»РѕРє Р°РІС‚РѕСЂРёР·Р°С†РёРё -->
+<div class="auth-section" style="position: absolute; top: 20px; left: 20px;">
+    <div th:if="${#authorization.expression('isAuthenticated()')}">
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+                Р’С‹Р№С‚Рё ([[${#authentication.principal.username}]])
+            </button>
+        </form>
+    </div>
+    <div th:unless="${#authorization.expression('isAuthenticated()')}">
+        <form th:action="@{/login}" method="post" class="d-flex gap-2">
+            <input type="text" name="username" placeholder="Р›РѕРіРёРЅ" class="form-control form-control-sm">
+            <input type="password" name="password" placeholder="РџР°СЂРѕР»СЊ" class="form-control form-control-sm">
+            <button type="submit" class="btn btn-primary btn-sm">Р’РѕР№С‚Рё</button>
+        </form>
+        <div th:if="${param.error}" class="text-danger mt-1">РћС€РёР±РєР° Р°РІС‚РѕСЂРёР·Р°С†РёРё!</div>
+    </div>
+</div>
+<!-- РћСЃРЅРѕРІРЅРѕР№ РєРѕРЅС‚РµР№РЅРµСЂ -->
+<div class="container mt-5 " style="padding-top: 120px;">
     <div class="card shadow">
         <div class="card-body">
             <h1 class="text-center mb-4 text-primary">РњРѕРё Р·Р°РєР°Р·С‹</h1>
@@ -3315,6 +3685,13 @@ CREATE TABLE users_roles (
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.springframework.security/spring-security-test -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
+			<version>6.3.3</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

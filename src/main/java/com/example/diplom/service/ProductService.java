@@ -101,4 +101,9 @@ public class ProductService {
         clone.setId(null); // Сбрасываем ID для создания новой записи
         return productRepository.save(clone);
     }
+
+
+    public boolean existsById(Long id) {
+        return productRepository.existsById(id);
+    }
 }
