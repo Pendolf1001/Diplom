@@ -3,6 +3,12 @@ package com.example.diplom.model;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 
+
+
+/**
+ * Элемент меню для пиццы.
+ * Наследует базовые атрибуты MenuItem и добавляет диаметр.
+ */
 @Entity
 @DiscriminatorValue("PIZZA")
 public class PizzaMenuItem extends MenuItem {

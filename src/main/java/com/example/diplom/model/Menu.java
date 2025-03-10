@@ -2,6 +2,10 @@ package com.example.diplom.model;
 
 import jakarta.persistence.*;
 
+/**
+ * Сущность меню ресторана.
+ * Содержит название, адрес и описание заведения.
+ */
 @Entity
 @Table(name = "menus")
 public class Menu {

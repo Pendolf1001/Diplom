@@ -13,6 +13,11 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+
+
+/**
+ * Сервис для управления заказами и их продуктами.
+ */
 @Slf4j
 @AllArgsConstructor
 @Service
@@ -24,14 +29,25 @@ public class OrderService {
     private final MenuItemRepository menuItemRepository;
     private final MenuService menuService;
 
-//    public OrderService(OrderRepository orderRepository) {
-//        this.orderRepository = orderRepository;
-//    }
 
+    /**
+     * Создает новый заказ.
+     *
+     * @param order заказ для сохранения
+     * @return созданный заказ
+     */
     public Order createOrder(Order order) {
         return orderRepository.save(order);
     }
 
+
+    /**
+     * Возвращает заказ по его ID.
+     *
+     * @param id ID заказа
+     * @return заказ
+     * @throws RuntimeException если заказ не найден
+     */
     public Order getOrderById(Long id) {
         return orderRepository.findById(id)
                 .orElseThrow(() -> {
@@ -40,34 +56,60 @@ public class OrderService {
                 });
     }
 
+
+    /**
+     * Возвращает все заказы.
+     *
+     * @return список всех заказов
+     */
     public List<Order> getAllOrders() {
         return orderRepository.findAll();
     }
 
+
+    /**
+     * Удаляет заказ по его ID.
+     *
+     * @param id ID заказа
+     */
     public void deleteOrder(Long id) {
         orderRepository.deleteById(id);
     }
 
+
+    /**
+     * Обновляет существующий заказ.
+     *
+     * @param order заказ для обновления
+     * @return обновленный заказ
+     */
     public Order updateOrder(Order order) {
         return orderRepository.update(order);
     }
 
-
+    /**
+     * Добавляет продукт из меню в заказ.
+     *
+     * @param orderId      ID заказа
+     * @param menuItemId   ID пункта меню
+     * @return обновленный заказ
+     * @throws RuntimeException если заказ или пункт меню не найдены
+     */
 
     @Transactional
     public Order addProductFromMenu(Long orderId, Long menuItemId) {
-        // Получить продукт из меню
+
         MenuItem menuItem = menuItemRepository.findById(menuItemId)
                 .orElseThrow(() -> new RuntimeException("Продукт в меню не найден"));
 
-        // Создать копию продукта для заказа
+
         Product product = createProductFromMenuItem(menuItem);
         product.setMenuId(menuItem.getMenu().getId());
 
-        // Сохранить продукт
+
         Product savedProduct = productRepository.save(product);
 
-        // Добавить продукт в заказ
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Заказ не найден"));
         order.addProduct(savedProduct);
@@ -75,8 +117,18 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+
+    /**
+     * Создает продукт на основе элемента меню, копируя его свойства.
+     * Поддерживает различные типы меню (PizzaMenuItem, RollMenuItem и др.).
+     * Для каждого типа создается соответствующий продукт с сохранением специфичных характеристик.
+     *
+     * @param item элемент меню, на основе которого создается продукт
+     * @return новый продукт с данными из элемента меню
+     * @throws IllegalArgumentException если тип элемента меню не поддерживается
+     */
     private Product createProductFromMenuItem(MenuItem item) {
-        // Реализация клонирования в зависимости от типа продукта
+
         if (item instanceof PizzaMenuItem) {
             PizzaMenuItem pizzaItem = (PizzaMenuItem) item;
             Pizza pizza = new Pizza();
@@ -119,6 +171,13 @@ public class OrderService {
     }
 
 
+    /**
+     * Преобразует заказ в DTO ответа.
+     *
+     * @param orderById заказ
+     * @param total     сумма заказа
+     * @return DTO ответа
+     */
     public OrderResponse orderToOrderResponse(Order orderById, double total) {
 
         OrderResponse response = new OrderResponse();
@@ -129,6 +188,12 @@ public class OrderService {
         return response;
     }
 
+
+    /**
+     * Возвращает все заказы с суммами и информацией о ресторане.
+     *
+     * @return список DTO заказов
+     */
     public List<OrderResponse> getAllOrdersWithTotals() {
         List<Order> orders=orderRepository.findAll();
         return orders.stream()

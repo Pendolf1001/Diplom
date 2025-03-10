@@ -4,6 +4,13 @@ import jakarta.persistence.*;
 
 import java.util.Set;
 
+
+
+
+/**
+ * Сущность пользователя с ролями.
+ * Использует EAGER загрузку для связей ManyToMany с Role.
+ */
 @Entity
 @Table(name = "users")
 public class User {

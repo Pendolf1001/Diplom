@@ -10,20 +10,33 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Сервис для управления меню и его пунктами.
+ */
 @Service
 @RequiredArgsConstructor
 public class MenuService {
     private final MenuRepository menuRepository;
     private final MenuItemRepository menuItemRepository;
 
-    // Создать меню
+    /**
+     * Создает новое меню.
+     *
+     * @param menu объект меню для сохранения
+     * @return сохраненное меню
+     */
     public Menu createMenu(Menu menu) {
         return menuRepository.save(menu);
     }
 
-
-
-    // Добавить продукт в меню
+    /**
+     * Добавляет пункт меню в указанное меню.
+     *
+     * @param menuId ID меню
+     * @param item   пункт меню для добавления
+     * @return сохраненный пункт меню
+     * @throws RuntimeException если меню не найдено
+     */
     public MenuItem addItemToMenu(Long menuId, MenuItem item) {
         Menu menu = menuRepository.findById(menuId)
                 .orElseThrow(() -> new RuntimeException("Меню не найдено"));
@@ -31,24 +44,44 @@ public class MenuService {
         return menuItemRepository.save(item);
     }
 
-    // Получить все продукты из меню
+    /**
+     * Возвращает все пункты меню по ID меню.
+     *
+     * @param menuId ID меню
+     * @return список пунктов меню
+     */
     public List<MenuItem> getMenuItems(Long menuId) {
-
         return menuItemRepository.findByMenuId(menuId);
     }
 
+    /**
+     * Возвращает все меню.
+     *
+     * @return список всех меню
+     */
     public List<Menu> getAllMenus() {
         return menuRepository.findAll();
     }
 
+    /**
+     * Возвращает меню по его ID.
+     *
+     * @param menuId ID меню
+     * @return меню
+     * @throws RuntimeException если меню не найдено
+     */
     public Menu getMenuById(Long menuId) {
-        Menu menu = menuRepository.findById(menuId)
+        return menuRepository.findById(menuId)
                 .orElseThrow(() -> new RuntimeException("Меню не найдено"));
-        return menu;
     }
 
+    /**
+     * Возвращает пункт меню по его ID.
+     *
+     * @param menuItemId ID пункта меню
+     * @return Optional с пунктом меню или пустой
+     */
     public Optional<MenuItem> getMenuItemById(Long menuItemId) {
-       return menuItemRepository.findById(menuItemId);
-
+        return menuItemRepository.findById(menuItemId);
     }
 }

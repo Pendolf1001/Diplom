@@ -7,6 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Репозиторий для работы с заказами.
+ * Объединяет методы JpaRepository и кастомную логику.
+ */
 
 @Repository
 public class OrderRepositoryImpl implements OrderRepository{
@@ -15,10 +19,22 @@ public class OrderRepositoryImpl implements OrderRepository{
     @Autowired
     private OrderJpaRepository orderJpaRepository;
 
+    /**
+     * Сохраняет новый заказ
+     * @param order Заказ для сохранения
+     * @return Сохраненный заказ
+     */
     @Override
     public Order save(Order order) {
         return orderJpaRepository.save(order);
     }
+
+    /**
+     * Ищет заказ по ID
+     * @param id Идентификатор заказа
+     * @return Optional с заказом или ошибкой, если не найден
+     * @throws RuntimeException при отсутствии заказа
+     */
 
     @Override
     public Optional<Order> findById(Long id) {

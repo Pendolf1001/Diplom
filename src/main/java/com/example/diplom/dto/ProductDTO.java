@@ -4,8 +4,15 @@ package com.example.diplom.dto;
 import com.example.diplom.model.ProductStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import org.springframework.context.annotation.Bean;
 
+
+
+
+/**
+ * DTO для представления информации о продукте.
+ * Содержит основные характеристики и статус продукта.
+ * Используется для передачи данных между клиентом и сервером.
+ */
 @AllArgsConstructor
 @Data
 public class ProductDTO {

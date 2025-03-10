@@ -8,5 +8,11 @@ import java.util.List;
 
 @Repository
 public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
+    /**
+     * Ищет все элементы меню, связанные с указанным меню по его ID.
+     *
+     * @param menuId ID меню для фильтрации элементов
+     * @return Список элементов меню, принадлежащих указанному меню
+     */
     List<MenuItem> findByMenuId(Long menuId);
 }

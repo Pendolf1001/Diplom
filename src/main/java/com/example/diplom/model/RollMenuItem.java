@@ -3,6 +3,12 @@ package com.example.diplom.model;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 
+
+
+/**
+ * Элемент меню для роллов.
+ * Наследует базовые атрибуты MenuItem и добавляет количество кусочков.
+ */
 @Entity
 @DiscriminatorValue("ROLL")
 public class RollMenuItem extends MenuItem {

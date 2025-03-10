@@ -2,6 +2,12 @@ package com.example.diplom.model;
 
 import jakarta.persistence.*;
 
+
+
+/**
+ * Базовый класс продуктов.
+ * Использует SINGLE_TABLE наследование.
+ */
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "dtype", discriminatorType = DiscriminatorType.STRING)

@@ -6,7 +6,10 @@ import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
-
+/**
+ * Сущность заказа с автоматическим обновлением статуса.
+ * Содержит логику синхронизации статуса заказа со статусами продуктов.
+ */
 @Entity
 @Table(name = "orders")
 public class Order {

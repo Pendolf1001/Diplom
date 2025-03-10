@@ -2,6 +2,12 @@ package com.example.diplom.model;
 
 import jakarta.persistence.*;
 
+
+
+/**
+ * Базовый класс для элементов меню с SINGLE_TABLE наследованием.
+ * Содержит связь ManyToOne с Menu и базовые атрибуты продукта.
+ */
 @Entity
 @Table(name = "menu_items")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)

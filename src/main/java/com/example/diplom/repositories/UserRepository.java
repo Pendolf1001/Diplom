@@ -8,6 +8,11 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository  extends JpaRepository<User, Long> {
-
+    /**
+     * Ищет пользователя по имени пользователя (логину).
+     *
+     * @param username Имя пользователя для поиска
+     * @return Optional с пользователем, если найден
+     */
     Optional<User> findByUsername(String username);
 }

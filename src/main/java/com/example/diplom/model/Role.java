@@ -2,6 +2,11 @@ package com.example.diplom.model;
 
 import jakarta.persistence.*;
 
+
+/**
+ * Сущность роли пользователя.
+ * Используется для системы аутентификации и авторизации.
+ */
 @Entity
 @Table(name = "roles")
 public class Role {

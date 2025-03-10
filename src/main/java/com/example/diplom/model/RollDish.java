@@ -4,6 +4,12 @@ package com.example.diplom.model;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 
+
+
+/**
+ * Конкретная реализация блюда - роллы.
+ * Добавляет атрибут количества кусочков.
+ */
 @Entity
 @DiscriminatorValue("ROLL")
 public class RollDish extends Dish {
