@@ -16,6 +16,5 @@ public abstract class Dish extends Product {
         super(name, description, price);
     }
 
-    @Override
-    public abstract Dish clone();
+
 }

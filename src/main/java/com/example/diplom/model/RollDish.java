@@ -26,13 +26,6 @@ public class RollDish extends Dish {
         this.pieceCount = pieceCount;
     }
 
-    @Override
-    public RollDish clone() {
-        RollDish clone = new RollDish(this.getName(), this.getDescription(), this.getPrice(), this.pieceCount);
-        clone.setId(null); // Сбрасываем ID для создания новой записи
-        clone.setProductStatus(this.getProductStatus());
-        return clone;
-    }
 
     @Override
     public String toString() {

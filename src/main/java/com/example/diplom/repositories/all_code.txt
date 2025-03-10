@@ -1,0 +1,239 @@
+﻿
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\MenuItemRepository.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.MenuItem;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+
+
+@Repository
+public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
+    List<MenuItem> findByMenuId(Long menuId);
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\MenuRepository.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Menu;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface MenuRepository extends JpaRepository<Menu, Long> {
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\OrderJpaRepository.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Order;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+
+@Repository
+public interface OrderJpaRepository extends JpaRepository<Order, Long>{
+
+
+
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\OrderRepository.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Order;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface OrderRepository {
+    Order save(Order order);
+    Optional<Order> findById(Long id);
+
+
+    void deleteById(Long id);
+
+    Order update(Order order);
+
+    List<Order> findAll();
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\OrderRepositoryImpl.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Order;
+import org.springframework.stereotype.Repository;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.List;
+import java.util.Optional;
+
+
+@Repository
+public class OrderRepositoryImpl implements OrderRepository{
+
+
+    @Autowired
+    private OrderJpaRepository orderJpaRepository;
+
+    @Override
+    public Order save(Order order) {
+        return orderJpaRepository.save(order);
+    }
+
+    @Override
+    public Optional<Order> findById(Long id) {
+        return Optional.ofNullable(orderJpaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ")));
+    }
+
+
+
+    @Override
+    public void deleteById(Long id) {
+        orderJpaRepository.deleteById(id);
+    }
+
+    @Override
+    public Order update(Order order) {
+        return orderJpaRepository.save(order); // save() РѕР±РЅРѕРІР»СЏРµС‚, РµСЃР»Рё РѕР±СЉРµРєС‚ СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚
+    }
+
+    @Override
+    public List<Order> findAll() {
+        return orderJpaRepository.findAll();
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\ProductJpaRepository.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Product;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+
+@Repository
+public interface ProductJpaRepository extends JpaRepository<Product, Long> {
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\ProductRepository.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Product;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface ProductRepository {
+
+    Product save(Product product);
+
+    Optional<Product> findById(Long id);
+
+    List<Product> findAll();
+
+    void deleteById(Long id);
+
+    Product update(Product product);
+
+    boolean existsById(Long id);
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\ProductRepositoryImpl.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Product;
+import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+
+@Repository
+public class ProductRepositoryImpl implements ProductRepository {
+
+
+    @Autowired
+    private ProductJpaRepository productJpaRepository;
+
+
+    @Override
+    public Product save(Product product) {
+        return productJpaRepository.save(product);
+    }
+
+    @Override
+    public Optional<Product> findById(Long id) {
+        Optional<Product>  product= Optional.ofNullable(productJpaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("РџСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ")));
+        return product;
+    }
+
+    @Override
+    public List<Product> findAll() {
+        return productJpaRepository.findAll();
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        productJpaRepository.deleteById(id);
+    }
+
+    @Override
+    public Product update(Product product) {
+        return productJpaRepository.save(product); // save() РѕР±РЅРѕРІР»СЏРµС‚, РµСЃР»Рё РѕР±СЉРµРєС‚ СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚
+    }
+
+    @Override
+    public boolean existsById(Long id) {
+        return productJpaRepository.existsById(id);
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\repositories\UserRepository.java
+================================================================================
+
+package com.example.diplom.repositories;
+
+import com.example.diplom.model.Menu;
+import com.example.diplom.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+
+@Repository
+public interface UserRepository  extends JpaRepository<User, Long> {
+
+    Optional<User> findByUsername(String username);
+}

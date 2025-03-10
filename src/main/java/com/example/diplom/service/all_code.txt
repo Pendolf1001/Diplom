@@ -1,0 +1,383 @@
+﻿
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\service\CustomUserDetailsService.java
+================================================================================
+
+package com.example.diplom.service;
+
+import com.example.diplom.model.User;
+import com.example.diplom.model.Role;
+import com.example.diplom.repositories.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        return org.springframework.security.core.userdetails.User.builder()
+                .username(user.getUsername())
+                .password(user.getPassword())
+                .roles(user.getRoles().stream()
+                        .map(Role::getName)
+                        .toArray(String[]::new))
+                .build();
+
+
+
+
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\service\MenuService.java
+================================================================================
+
+package com.example.diplom.service;
+
+import com.example.diplom.model.Menu;
+import com.example.diplom.model.MenuItem;
+import com.example.diplom.repositories.MenuItemRepository;
+import com.example.diplom.repositories.MenuRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+public class MenuService {
+    private final MenuRepository menuRepository;
+    private final MenuItemRepository menuItemRepository;
+
+    // РЎРѕР·РґР°С‚СЊ РјРµРЅСЋ
+    public Menu createMenu(Menu menu) {
+        return menuRepository.save(menu);
+    }
+
+
+
+    // Р”РѕР±Р°РІРёС‚СЊ РїСЂРѕРґСѓРєС‚ РІ РјРµРЅСЋ
+    public MenuItem addItemToMenu(Long menuId, MenuItem item) {
+        Menu menu = menuRepository.findById(menuId)
+                .orElseThrow(() -> new RuntimeException("РњРµРЅСЋ РЅРµ РЅР°Р№РґРµРЅРѕ"));
+        item.setMenu(menu);
+        return menuItemRepository.save(item);
+    }
+
+    // РџРѕР»СѓС‡РёС‚СЊ РІСЃРµ РїСЂРѕРґСѓРєС‚С‹ РёР· РјРµРЅСЋ
+    public List<MenuItem> getMenuItems(Long menuId) {
+
+        return menuItemRepository.findByMenuId(menuId);
+    }
+
+    public List<Menu> getAllMenus() {
+        return menuRepository.findAll();
+    }
+
+    public Menu getMenuById(Long menuId) {
+        Menu menu = menuRepository.findById(menuId)
+                .orElseThrow(() -> new RuntimeException("РњРµРЅСЋ РЅРµ РЅР°Р№РґРµРЅРѕ"));
+        return menu;
+    }
+
+    public Optional<MenuItem> getMenuItemById(Long menuItemId) {
+       return menuItemRepository.findById(menuItemId);
+
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\service\OrderService.java
+================================================================================
+
+package com.example.diplom.service;
+
+import com.example.diplom.dto.OrderResponse;
+import com.example.diplom.model.*;
+import com.example.diplom.repositories.MenuItemRepository;
+import com.example.diplom.repositories.OrderRepository;
+import com.example.diplom.repositories.ProductRepository;
+import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Slf4j
+@AllArgsConstructor
+@Service
+public class OrderService {
+    private final OrderRepository orderRepository;
+
+    private final ProductRepository productRepository;
+
+    private final MenuItemRepository menuItemRepository;
+    private final MenuService menuService;
+
+//    public OrderService(OrderRepository orderRepository) {
+//        this.orderRepository = orderRepository;
+//    }
+
+    public Order createOrder(Order order) {
+        return orderRepository.save(order);
+    }
+
+    public Order getOrderById(Long id) {
+        return orderRepository.findById(id)
+                .orElseThrow(() -> {
+                log.warn("Р—Р°РєР°Р· СЃ ID {} РЅРµ РЅР°Р№РґРµРЅ", id);
+                return new RuntimeException("Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ");
+                });
+    }
+
+    public List<Order> getAllOrders() {
+        return orderRepository.findAll();
+    }
+
+    public void deleteOrder(Long id) {
+        orderRepository.deleteById(id);
+    }
+
+    public Order updateOrder(Order order) {
+        return orderRepository.update(order);
+    }
+
+
+
+    @Transactional
+    public Order addProductFromMenu(Long orderId, Long menuItemId) {
+        // РџРѕР»СѓС‡РёС‚СЊ РїСЂРѕРґСѓРєС‚ РёР· РјРµРЅСЋ
+        MenuItem menuItem = menuItemRepository.findById(menuItemId)
+                .orElseThrow(() -> new RuntimeException("РџСЂРѕРґСѓРєС‚ РІ РјРµРЅСЋ РЅРµ РЅР°Р№РґРµРЅ"));
+
+        // РЎРѕР·РґР°С‚СЊ РєРѕРїРёСЋ РїСЂРѕРґСѓРєС‚Р° РґР»СЏ Р·Р°РєР°Р·Р°
+        Product product = createProductFromMenuItem(menuItem);
+        product.setMenuId(menuItem.getMenu().getId());
+
+        // РЎРѕС…СЂР°РЅРёС‚СЊ РїСЂРѕРґСѓРєС‚
+        Product savedProduct = productRepository.save(product);
+
+        // Р”РѕР±Р°РІРёС‚СЊ РїСЂРѕРґСѓРєС‚ РІ Р·Р°РєР°Р·
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ"));
+        order.addProduct(savedProduct);
+
+        return orderRepository.save(order);
+    }
+
+    private Product createProductFromMenuItem(MenuItem item) {
+        // Р РµР°Р»РёР·Р°С†РёСЏ РєР»РѕРЅРёСЂРѕРІР°РЅРёСЏ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ С‚РёРїР° РїСЂРѕРґСѓРєС‚Р°
+        if (item instanceof PizzaMenuItem) {
+            PizzaMenuItem pizzaItem = (PizzaMenuItem) item;
+            Pizza pizza = new Pizza();
+            pizza.setName(pizzaItem.getName());
+            pizza.setDescription(pizzaItem.getDescription());
+            pizza.setPrice(pizzaItem.getPrice());
+            pizza.setDiameter(pizzaItem.getDiameter());
+            pizza.setMenuId(item.getMenu().getId());
+            return pizza;
+        }else if (item instanceof RollMenuItem) {
+            RollMenuItem rollItem = (RollMenuItem) item;
+            RollDish roll = new RollDish();
+            roll.setName(rollItem.getName());
+            roll.setDescription(rollItem.getDescription());
+            roll.setPrice(rollItem.getPrice());
+            roll.setPieceCount(rollItem.getPieceCount()); // РўРѕР»СЊРєРѕ pieceCount
+            roll.setMenuId(item.getMenu().getId());
+            return roll;
+        }
+
+        // РђРЅР°Р»РѕРіРёС‡РЅРѕ РґР»СЏ РґСЂСѓРіРёС… С‚РёРїРѕРІ
+        throw new IllegalArgumentException("РўРёРї РїСЂРѕРґСѓРєС‚Р° РЅРµ РїРѕРґРґРµСЂР¶РёРІР°РµС‚СЃСЏ");
+    }
+
+
+
+    /**
+     * РџРѕРґСЃС‡РёС‚С‹РІР°РµС‚ СЃСѓРјРјСѓ Р·Р°РєР°Р·Р°.
+     *
+     * @param orderId ID Р·Р°РєР°Р·Р°.
+     * @return РЎСѓРјРјР° Р·Р°РєР°Р·Р°.
+     */
+    public double calculateOrderTotal(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Р—Р°РєР°Р· РЅРµ РЅР°Р№РґРµРЅ"));
+
+        return order.getProducts().stream()
+                .mapToDouble(Product::getPrice)
+                .sum();
+    }
+
+
+    public OrderResponse orderToOrderResponse(Order orderById, double total) {
+
+        OrderResponse response = new OrderResponse();
+        response.setId(orderById.getId());
+        response.setStatus(orderById.getStatus());
+        response.setProducts(orderById.getProducts());
+        response.setTotal(total);
+        return response;
+    }
+
+    public List<OrderResponse> getAllOrdersWithTotals() {
+        List<Order> orders=orderRepository.findAll();
+        return orders.stream()
+                .map(order -> {
+                    double total = calculateOrderTotal(order.getId());
+                    OrderResponse response = orderToOrderResponse(order, total);
+
+
+                    // РџСЂРѕРІРµСЂСЏРµРј, РµСЃС‚СЊ Р»Рё РїСЂРѕРґСѓРєС‚С‹ РІ Р·Р°РєР°Р·Рµ
+                    if (!order.getProducts().isEmpty()) {
+                        Product firstProduct = order.getProducts().get(0);
+                        // РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ menuId РЅРµ null
+                        if (firstProduct.getMenuId() != null) {
+                            try {
+                                Menu menu = menuService.getMenuById(firstProduct.getMenuId());
+                                response.setRestaurantName(menu.getName());
+                                response.setRestaurantAddress(menu.getAddress());
+                            } catch (RuntimeException e) {
+                                // Р›РѕРіРёСЂСѓРµРј РѕС€РёР±РєСѓ, РµСЃР»Рё РјРµРЅСЋ РЅРµ РЅР°Р№РґРµРЅРѕ
+                                log.error("РњРµРЅСЋ СЃ ID {} РЅРµ РЅР°Р№РґРµРЅРѕ", firstProduct.getMenuId());
+                                response.setRestaurantName("РќРµРёР·РІРµСЃС‚РЅС‹Р№ СЂРµСЃС‚РѕСЂР°РЅ");
+                                response.setRestaurantAddress("РђРґСЂРµСЃ РЅРµ СѓРєР°Р·Р°РЅ");
+                            }
+                        } else {
+                            log.warn("РџСЂРѕРґСѓРєС‚ {} РЅРµ РёРјРµРµС‚ menuId", firstProduct.getId());
+                            response.setRestaurantName("РќРµРёР·РІРµСЃС‚РЅС‹Р№ СЂРµСЃС‚РѕСЂР°РЅ");
+                            response.setRestaurantAddress("РђРґСЂРµСЃ РЅРµ СѓРєР°Р·Р°РЅ");
+                        }
+                    }
+                    return response;
+                })
+                .collect(Collectors.toList());
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\service\ProductService.java
+================================================================================
+
+
+
+package com.example.diplom.service;
+
+import com.example.diplom.model.Product;
+import com.example.diplom.repositories.ProductRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ProductService {
+
+    private final ProductRepository productRepository;
+
+    /**
+     * РЎРѕР·РґР°РµС‚ РЅРѕРІС‹Р№ РїСЂРѕРґСѓРєС‚, РµСЃР»Рё РїСЂРѕРґСѓРєС‚ СЃ С‚Р°РєРёРј ID РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚.
+     *
+     * @param product РџСЂРѕРґСѓРєС‚ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ.
+     * @return РЎРѕР·РґР°РЅРЅС‹Р№ РїСЂРѕРґСѓРєС‚.
+     * @throws IllegalArgumentException Р•СЃР»Рё РїСЂРѕРґСѓРєС‚ СЃ С‚Р°РєРёРј ID СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚.
+     */
+    @Transactional
+    public Product createProduct(Product product) {
+        if (product.getId() != null && productRepository.existsById(product.getId())) {
+            log.warn("РџСЂРѕРґСѓРєС‚ СЃ ID {} СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚", product.getId());
+            throw new IllegalArgumentException("РџСЂРѕРґСѓРєС‚ СЃ С‚Р°РєРёРј ID СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚");
+        }
+        return productRepository.save(product);
+    }
+
+    /**
+     * Р’РѕР·РІСЂР°С‰Р°РµС‚ РїСЂРѕРґСѓРєС‚ РїРѕ РµРіРѕ ID.
+     *
+     * @param id ID РїСЂРѕРґСѓРєС‚Р°.
+     * @return РќР°Р№РґРµРЅРЅС‹Р№ РїСЂРѕРґСѓРєС‚.
+     * @throws RuntimeException Р•СЃР»Рё РїСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ.
+     */
+    public Product getProductById(Long id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("РџСЂРѕРґСѓРєС‚ СЃ ID {} РЅРµ РЅР°Р№РґРµРЅ", id);
+                    return new RuntimeException("РџСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ");
+                });
+    }
+
+    /**
+     * Р’РѕР·РІСЂР°С‰Р°РµС‚ СЃРїРёСЃРѕРє РІСЃРµС… РїСЂРѕРґСѓРєС‚РѕРІ.
+     *
+     * @return РЎРїРёСЃРѕРє РїСЂРѕРґСѓРєС‚РѕРІ.
+     */
+    public List<Product> getAllProducts() {
+        return productRepository.findAll();
+    }
+
+    /**
+     * РЈРґР°Р»СЏРµС‚ РїСЂРѕРґСѓРєС‚ РїРѕ РµРіРѕ ID.
+     *
+     * @param id ID РїСЂРѕРґСѓРєС‚Р°.
+     * @throws RuntimeException Р•СЃР»Рё РїСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ.
+     */
+    @Transactional
+    public void deleteProduct(Long id) {
+        if (!productRepository.existsById(id)) {
+            log.warn("РџСЂРѕРґСѓРєС‚ СЃ ID {} РЅРµ РЅР°Р№РґРµРЅ", id);
+            throw new RuntimeException("РџСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ");
+        }
+        productRepository.deleteById(id);
+    }
+
+    /**
+     * РћР±РЅРѕРІР»СЏРµС‚ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ РїСЂРѕРґСѓРєС‚.
+     *
+     * @param product РџСЂРѕРґСѓРєС‚ РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ.
+     * @return РћР±РЅРѕРІР»РµРЅРЅС‹Р№ РїСЂРѕРґСѓРєС‚.
+     * @throws RuntimeException Р•СЃР»Рё РїСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ.
+     */
+    @Transactional
+    public Product updateProduct(Product product) {
+        if (product.getId() == null || !productRepository.existsById(product.getId())) {
+            log.warn("РџСЂРѕРґСѓРєС‚ СЃ ID {} РЅРµ РЅР°Р№РґРµРЅ", product.getId());
+            throw new RuntimeException("РџСЂРѕРґСѓРєС‚ РЅРµ РЅР°Р№РґРµРЅ");
+        }
+        return productRepository.save(product);
+    }
+
+    /**
+     * РЎРѕР·РґР°РµС‚ РєР»РѕРЅ РїСЂРѕРґСѓРєС‚Р°.
+     *
+     * @param product РџСЂРѕРґСѓРєС‚ РґР»СЏ РєР»РѕРЅРёСЂРѕРІР°РЅРёСЏ.
+     * @return РљР»РѕРЅРёСЂРѕРІР°РЅРЅС‹Р№ РїСЂРѕРґСѓРєС‚.
+     */
+    @Transactional
+    public Product createCloneProduct(Product product) {
+        Product clone = (Product) product.clone();
+        clone.setId(null); // РЎР±СЂР°СЃС‹РІР°РµРј ID РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕР№ Р·Р°РїРёСЃРё
+        return productRepository.save(clone);
+    }
+
+
+    public boolean existsById(Long id) {
+        return productRepository.existsById(id);
+    }
+}

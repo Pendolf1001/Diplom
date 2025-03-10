@@ -12,34 +12,37 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+/**
+ * REST-контроллер для управления меню.
+ */
 @RestController
 @RequestMapping("/menus")
 @RequiredArgsConstructor
 public class MenuController {
     private final MenuService menuService;
-    private final OrderService orderService;
 
+    /**
+     * Создает новое меню.
+     *
+     * @param menu Объект меню для создания
+     * @return Созданное меню в теле ответа
+     */
     @PostMapping
     public ResponseEntity<Menu> createMenu(@RequestBody Menu menu) {
         return ResponseEntity.ok(menuService.createMenu(menu));
     }
 
-
-
-
     /**
      * Добавляет пиццу в меню.
      *
-     * @param menuId ID меню.
-     * @param pizza  Данные пиццы.
-     * @return Сохраненная пицца.
+     * @param menuId ID меню
+     * @param pizza  Данные пиццы
+     * @return Сохраненная пицца в теле ответа
      */
     @PostMapping("/{menuId}/pizzas")
     public ResponseEntity<PizzaMenuItem> addPizzaToMenu(
             @PathVariable Long menuId,
-            @RequestBody PizzaMenuItem pizza
-    ) {
-
+            @RequestBody PizzaMenuItem pizza) {
         PizzaMenuItem savedPizza;
         try {
             savedPizza = (PizzaMenuItem) menuService.addItemToMenu(menuId, pizza);
@@ -49,12 +52,17 @@ public class MenuController {
         return new ResponseEntity<>(savedPizza, HttpStatus.CREATED);
     }
 
+    /**
+     * Добавляет роллы в меню.
+     *
+     * @param menuId ID меню
+     * @param roll   Данные ролла
+     * @return Сохраненный ролл в теле ответа
+     */
     @PostMapping("/{menuId}/rolls")
     public ResponseEntity<RollMenuItem> addRollsToMenu(
             @PathVariable Long menuId,
-            @RequestBody RollMenuItem roll
-    ) {
-
+            @RequestBody RollMenuItem roll) {
         RollMenuItem savedRoll;
         try {
             savedRoll = (RollMenuItem) menuService.addItemToMenu(menuId, roll);
@@ -64,28 +72,29 @@ public class MenuController {
         return new ResponseEntity<>(savedRoll, HttpStatus.CREATED);
     }
 
-
-
+    /**
+     * Получает элементы меню по ID.
+     *
+     * @param menuId ID меню
+     * @return Список элементов меню в теле ответа
+     */
     @GetMapping("/{menuId}/items")
     public ResponseEntity<List<MenuItem>> getMenuItems(@PathVariable Long menuId) {
-//        return ResponseEntity.ok(menuService.getMenuItems(menuId));
-
-
         try {
-            Menu menuById=menuService.getMenuById(menuId);
-
+            Menu menuById = menuService.getMenuById(menuId);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ArrayList<>());
         }
-
         return ResponseEntity.ok(menuService.getMenuItems(menuId));
     }
 
-
+    /**
+     * Получает все меню.
+     *
+     * @return Список всех меню в теле ответа
+     */
     @GetMapping
     public ResponseEntity<List<Menu>> getAllMenus() {
-        return new ResponseEntity<>(menuService.getAllMenus(),HttpStatus.OK);
+        return new ResponseEntity<>(menuService.getAllMenus(), HttpStatus.OK);
     }
 }
-
-

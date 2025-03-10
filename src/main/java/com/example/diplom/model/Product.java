@@ -6,7 +6,7 @@ import jakarta.persistence.*;
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "dtype", discriminatorType = DiscriminatorType.STRING)
 @Table(name = "PRODUCTS")
-public abstract class Product implements Prototype {
+public abstract class Product {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -103,7 +103,6 @@ public abstract class Product implements Prototype {
                 '}';
     }
 
-    @Override
-    public abstract Prototype clone();
+
 
 }

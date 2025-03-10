@@ -10,16 +10,22 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// ProductsController.java
+/**
+ * REST-контроллер для управления продуктами.
+ */
 @RestController
 @AllArgsConstructor
 @RequestMapping("/products")
 public class ProductsController {
-
-
     private final ProductService productService;
 
-
-
+    /**
+     * Создает новый продукт на основе DTO.
+     *
+     * @param productDTO DTO с данными продукта
+     * @return Созданный продукт в теле ответа
+     */
     @PostMapping
     public ResponseEntity<Product> createProduct(@RequestBody ProductDTO productDTO) {
         Product product;
@@ -34,6 +40,12 @@ public class ProductsController {
         return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
     }
 
+    /**
+     * Получает продукт по ID.
+     *
+     * @param id ID продукта
+     * @return Продукт в теле ответа
+     */
     @GetMapping("/{id}")
     public ResponseEntity<Product> getProduct(@PathVariable Long id) {
         Product productById;
@@ -42,18 +54,27 @@ public class ProductsController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Pizza());
         }
-
         return new ResponseEntity<>(productById, HttpStatus.OK);
     }
 
+    /**
+     * Получает все продукты.
+     *
+     * @return Список всех продуктов в теле ответа
+     */
     @GetMapping
-    public ResponseEntity<List<Product>>getAllProducts() {
+    public ResponseEntity<List<Product>> getAllProducts() {
         return new ResponseEntity<>(productService.getAllProducts(), HttpStatus.OK);
     }
 
+    /**
+     * Удаляет продукт по ID.
+     *
+     * @param id ID продукта
+     * @return Пустой ответ при успехе
+     */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void>deleteProduct(@PathVariable Long id) {
-
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         Product productById;
         try {
             productById = productService.getProductById(id);
@@ -64,16 +85,21 @@ public class ProductsController {
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * Обновляет существующий продукт.
+     *
+     * @param id          ID продукта
+     * @param productDTO DTO с обновленными данными
+     * @return Обновленный продукт в теле ответа
+     */
     @PutMapping("/{id}")
-    public ResponseEntity<Product>  updateProduct(@PathVariable Long id, @RequestBody ProductDTO productDTO) {
+    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody ProductDTO productDTO) {
         Product productById;
         try {
             productById = productService.getProductById(id);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Pizza());
         }
-
-
         if (productDTO.getName() != null) {
             productById.setName(productDTO.getName());
         }
@@ -86,19 +112,10 @@ public class ProductsController {
         if (productDTO.getProductStatus() != null) {
             productById.setProductStatus(productDTO.getProductStatus());
         }
-
-
         if (productById instanceof Pizza && productDTO.getDiameter() != 0) {
             ((Pizza) productById).setDiameter(productDTO.getDiameter());
         }
-
-
         Product updatedProduct = productService.updateProduct(productById);
-
-
         return new ResponseEntity<>(updatedProduct, HttpStatus.OK);
-
-
     }
-
 }

@@ -1,0 +1,638 @@
+﻿
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Dish.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+
+@Entity
+@DiscriminatorValue("DISH")
+public abstract class Dish extends Product {
+
+    public Dish() {
+        super();
+    }
+
+    public Dish(String name, String description, double price) {
+        super(name, description, price);
+    }
+
+    @Override
+    public abstract Dish clone();
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Menu.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "menus")
+public class Menu {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String address; // РђРґСЂРµСЃ Р·Р°РІРµРґРµРЅРёСЏ
+    private String description;
+
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\MenuItem.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "menu_items")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "dtype", discriminatorType = DiscriminatorType.STRING)
+public abstract class MenuItem {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String description;
+    private double price;
+
+    @ManyToOne
+    @JoinColumn(name = "menu_id")
+    private Menu menu;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+    public Menu getMenu() {
+        return menu;
+    }
+
+    public void setMenu(Menu menu) {
+        this.menu = menu;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Order.java
+================================================================================
+
+package com.example.diplom.model;
+
+
+import jakarta.persistence.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+
+@Entity
+@Table(name = "orders")
+public class Order {
+
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "orders_products",
+            joinColumns = @JoinColumn(name = "order_id"),
+            inverseJoinColumns = @JoinColumn(name="product_id")
+    )
+    private List<Product> products;
+
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status = OrderStatus.NEW;
+
+    public Order() {
+        this.products = new ArrayList<>();
+    }
+
+
+    public Long getId() {
+        return id;
+    }
+
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public List<Product> getProducts() {
+        return products;
+    }
+
+    public void setProducts(List<Product> products) {
+        this.products = products;
+    }
+
+    public OrderStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(OrderStatus status) {
+        this.status = status;
+    }
+
+
+
+    public void addProduct(Product product) {
+        products.add(product);
+        updateOrderStatus();
+    }
+
+
+    private void updateOrderStatus() {
+        boolean allReady = products.stream().allMatch(p -> p.getProductStatus() == ProductStatus.READY);
+        boolean anyInProgress = products.stream().anyMatch(p -> p.getProductStatus() == ProductStatus.IN_PROGRESS);
+
+        if (allReady) {
+            status = OrderStatus.COMPLETED;
+        } else if (anyInProgress) {
+            status = OrderStatus.IN_PROGRESS;
+        } else {
+            status = OrderStatus.NEW;
+        }
+
+
+    }
+
+    public void updateProductStatus(Product product, ProductStatus status) {
+        product.setProductStatus(status);
+        updateOrderStatus();
+    }
+
+
+
+
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\OrderStatus.java
+================================================================================
+
+package com.example.diplom.model;
+
+public enum OrderStatus {
+    NEW, IN_PROGRESS, COMPLETED;
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Pizza.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+@Entity
+@DiscriminatorValue("PIZZA")
+public class Pizza extends Dish {
+    private int diameter; // Р”РёР°РјРµС‚СЂ РїРёС†С†С‹ РІ СЃРј
+
+    public Pizza() {
+        super();
+    }
+
+    public Pizza(String name, String description, double price, int diameter) {
+        super(name, description, price);
+        this.diameter = diameter;
+    }
+
+    public int getDiameter() {
+        return diameter;
+    }
+
+    public void setDiameter(int diameter) {
+        this.diameter = diameter;
+    }
+
+    @Override
+    public Pizza clone() {
+        Pizza clone = new Pizza(this.getName(), this.getDescription(), this.getPrice(), this.diameter);
+        clone.setId(null); // РЎР±СЂР°СЃС‹РІР°РµРј ID РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕР№ Р·Р°РїРёСЃРё
+        clone.setProductStatus(this.getProductStatus());
+        return clone;
+    }
+
+    @Override
+    public String toString() {
+        return "Pizza{" +
+                "name='" + getName() + '\'' +
+                ", description='" + getDescription() + '\'' +
+                ", price=" + getPrice() +
+                ", diameter=" + diameter +
+                ", progressStatus=" + getProductStatus() +
+                '}';
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\PizzaMenuItem.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+@Entity
+@DiscriminatorValue("PIZZA")
+public class PizzaMenuItem extends MenuItem {
+
+    private int diameter; // РЈРЅРёРєР°Р»СЊРЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+
+
+    public int getDiameter() {
+        return diameter;
+    }
+
+    public void setDiameter(int diameter) {
+        this.diameter = diameter;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Product.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.*;
+
+@Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "dtype", discriminatorType = DiscriminatorType.STRING)
+@Table(name = "PRODUCTS")
+public abstract class Product implements Prototype {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String name;
+    private String description;
+    private double price;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private ProductStatus productStatus = ProductStatus.NOT_STARTED;
+
+    @Column(name = "menu_id")
+    private Long menuId;
+
+    public Long getMenuId() {
+        return menuId;
+    }
+
+    public void setMenuId(Long menuId) {
+        this.menuId = menuId;
+    }
+
+    public Product(){}
+
+    public Product(String name, String description, double price, Long menuId) {
+        this.name = name;
+        this.description = description;
+        this.price = price;
+        this.menuId = menuId;
+    }
+
+    public Product(String name, String description, double price) {
+        this.name = name;
+        this.description = description;
+        this.price = price;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public ProductStatus getProductStatus() {
+        return productStatus;
+    }
+
+    public void setProductStatus(ProductStatus productStatus) {
+        this.productStatus = productStatus;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+
+
+
+
+    public void  updateStatus( ProductStatus productStatus){
+        this.productStatus = productStatus;
+    }
+
+    @Override
+    public String toString() {
+        return "Product{" +
+                "name='" + name + '\'' +
+                ", description='" + description + '\'' +
+                ", price=" + price +
+                ", progressStatus=" + productStatus +
+                '}';
+    }
+
+    @Override
+    public abstract Prototype clone();
+
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\ProductStatus.java
+================================================================================
+
+package com.example.diplom.model;
+
+public enum ProductStatus {
+    NOT_STARTED, IN_PROGRESS, READY;
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Prototype.java
+================================================================================
+
+package com.example.diplom.model;
+
+public interface Prototype {
+
+    public Prototype clone();
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Role.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "roles")
+public class Role {
+
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+
+    private String name;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\RollDish.java
+================================================================================
+
+package com.example.diplom.model;
+
+
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+@Entity
+@DiscriminatorValue("ROLL")
+public class RollDish extends Dish {
+    private int pieceCount; // Р”РёР°РјРµС‚СЂ РїРёС†С†С‹ РІ СЃРј
+
+    public RollDish() {
+        super();
+    }
+
+    public RollDish (String name, String description, double price, int pieceCount) {
+        super(name, description, price);
+        this.pieceCount = pieceCount;
+    }
+
+    public int getPieceCount() {
+        return pieceCount;
+    }
+
+    public void setPieceCount(int pieceCount) {
+        this.pieceCount = pieceCount;
+    }
+
+    @Override
+    public RollDish clone() {
+        RollDish clone = new RollDish(this.getName(), this.getDescription(), this.getPrice(), this.pieceCount);
+        clone.setId(null); // РЎР±СЂР°СЃС‹РІР°РµРј ID РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕР№ Р·Р°РїРёСЃРё
+        clone.setProductStatus(this.getProductStatus());
+        return clone;
+    }
+
+    @Override
+    public String toString() {
+        return "Roll{" +
+                "name='" + getName() + '\'' +
+                ", description='" + getDescription() + '\'' +
+                ", price=" + getPrice() +
+                ", pieceCount=" + pieceCount +
+                ", progressStatus=" + getProductStatus() +
+                '}';
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\RollMenuItem.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+@Entity
+@DiscriminatorValue("ROLL")
+public class RollMenuItem extends MenuItem {
+
+    private int pieceCount; // РЈРЅРёРєР°Р»СЊРЅРѕРµ РїРѕР»Рµ РґР»СЏ СЂРѕР»Р»РѕРІ
+
+    public int getPieceCount() {
+        return pieceCount;
+    }
+
+    public void setPieceCount(int pieceCount) {
+        this.pieceCount = pieceCount;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\User.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.*;
+
+import java.util.Set;
+
+@Entity
+@Table(name = "users")
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+
+    private String username;
+    private String password;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "users_roles", // РРјСЏ СЃРІСЏР·СѓСЋС‰РµР№ С‚Р°Р±Р»РёС†С‹
+            joinColumns = @JoinColumn(name = "user_id"), // РљРѕР»РѕРЅРєР° РґР»СЏ User
+            inverseJoinColumns = @JoinColumn(name = "role_id") // РљРѕР»РѕРЅРєР° РґР»СЏ Role
+    )
+    private Set<Role> roles;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public Set<Role> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
+    }
+}

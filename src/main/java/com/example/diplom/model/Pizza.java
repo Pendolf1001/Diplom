@@ -25,13 +25,7 @@ public class Pizza extends Dish {
         this.diameter = diameter;
     }
 
-    @Override
-    public Pizza clone() {
-        Pizza clone = new Pizza(this.getName(), this.getDescription(), this.getPrice(), this.diameter);
-        clone.setId(null); // Сбрасываем ID для создания новой записи
-        clone.setProductStatus(this.getProductStatus());
-        return clone;
-    }
+
 
     @Override
     public String toString() {

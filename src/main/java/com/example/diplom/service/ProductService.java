@@ -89,18 +89,6 @@ public class ProductService {
         return productRepository.save(product);
     }
 
-    /**
-     * Создает клон продукта.
-     *
-     * @param product Продукт для клонирования.
-     * @return Клонированный продукт.
-     */
-    @Transactional
-    public Product createCloneProduct(Product product) {
-        Product clone = (Product) product.clone();
-        clone.setId(null); // Сбрасываем ID для создания новой записи
-        return productRepository.save(clone);
-    }
 
 
     public boolean existsById(Long id) {

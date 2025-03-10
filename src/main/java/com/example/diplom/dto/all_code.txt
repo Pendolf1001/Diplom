@@ -1,0 +1,51 @@
+﻿
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\dto\OrderResponse.java
+================================================================================
+
+package com.example.diplom.dto;
+
+
+import com.example.diplom.model.OrderStatus;
+import com.example.diplom.model.Product;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.util.List;
+
+@Getter
+@Setter
+public class OrderResponse {
+    private Long id;
+    private OrderStatus status;
+    private List<Product> products;
+    private double total;
+    private String restaurantName;
+    private String restaurantAddress;
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\dto\ProductDTO.java
+================================================================================
+
+package com.example.diplom.dto;
+
+
+import com.example.diplom.model.ProductStatus;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import org.springframework.context.annotation.Bean;
+
+@AllArgsConstructor
+@Data
+public class ProductDTO {
+    public Long id;
+    public String name;
+    public String description;
+    public double price;
+    public ProductStatus productStatus;
+    public int diameter;
+    public int pieceCount;
+    public String dtype;
+
+}
