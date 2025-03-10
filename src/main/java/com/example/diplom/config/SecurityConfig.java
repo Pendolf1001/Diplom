@@ -18,7 +18,7 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(auth -> auth
 
-                        .requestMatchers("/css/**", "/js/**", "/login","/", "/menu", "/cart/add", "/cart/remove", "/cart/checkout")
+                        .requestMatchers("/css/**", "/js/**", "/login","/", "/logout","/menu", "/cart/add", "/cart/remove", "/cart/checkout")
                         .permitAll()
                         .requestMatchers("/cart/all")
                         .hasAnyRole("STAFF", "ADMIN")
