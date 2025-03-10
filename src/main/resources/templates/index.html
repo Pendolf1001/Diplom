@@ -14,7 +14,7 @@
 </head>
 <body class="bg-light">
 
-<!-- Добавьте этот блок в начало body -->
+<!-- Блок авторизации>-->
 <div class="auth-section" style="position: absolute; top: 20px; left: 20px;">
     <div th:if="${#authorization.expression('isAuthenticated()')}">
         <form th:action="@{/logout}" method="post">
@@ -33,7 +33,7 @@
     </div>
 </div>
 
-<div class="container mt-5">
+<div class="container mt-5" style="padding-top: 120px;">
     <div class="card shadow">
         <div class="card-body">
             <h1 class="text-center mb-4 text-primary" th:text="${message}"></h1>
