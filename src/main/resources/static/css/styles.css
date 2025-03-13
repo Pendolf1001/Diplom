@@ -113,3 +113,13 @@
 .auth-section input {
     max-width: 120px;
 }
+
+html {
+    scroll-behavior: smooth;
+}
+
+html {
+    scroll-behavior: auto;
+}
+
+

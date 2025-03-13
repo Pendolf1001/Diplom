@@ -131,6 +131,23 @@
             document.querySelector('.cart-overlay')?.remove();
         }
     }
+
+
+     // Сохраняем позицию скролла перед отправкой любой формы
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', () => {
+            localStorage.setItem('scrollPosition', window.pageYOffset);
+        });
+    });
+
+    // Восстанавливаем позицию после загрузки страницы
+    window.addEventListener('load', () => {
+        const savedPosition = localStorage.getItem('scrollPosition');
+        if (savedPosition) {
+            window.scrollTo(0, parseInt(savedPosition));
+            localStorage.removeItem('scrollPosition');
+        }
+    });
 </script>
 </body>
 </html>
