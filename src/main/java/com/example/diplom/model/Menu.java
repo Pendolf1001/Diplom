@@ -15,7 +15,9 @@ public class Menu {
     private Long id;
 
     private String name;
+
     private String address; // Адрес заведения
+
     private String description;
 
 

@@ -1,0 +1,1368 @@
+﻿
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\config\SecurityConfig.java
+================================================================================
+
+package com.example.diplom.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
+
+/**
+ * РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ Р±РµР·РѕРїР°СЃРЅРѕСЃС‚Рё РїСЂРёР»РѕР¶РµРЅРёСЏ.
+ * РћРїСЂРµРґРµР»СЏРµС‚ РїСЂР°РІРёР»Р° РґРѕСЃС‚СѓРїР°, Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёРё Рё С€РёС„СЂРѕРІР°РЅРёСЏ РїР°СЂРѕР»РµР№.
+ */
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    /**
+     * РќР°СЃС‚СЂР°РёРІР°РµС‚ С†РµРїРѕС‡РєСѓ С„РёР»СЊС‚СЂРѕРІ Р±РµР·РѕРїР°СЃРЅРѕСЃС‚Рё.
+     *
+     * @param http РћР±СЉРµРєС‚ РєРѕРЅС„РёРіСѓСЂР°С†РёРё HTTP-Р±РµР·РѕРїР°СЃРЅРѕСЃС‚Рё
+     * @return РќР°СЃС‚СЂРѕРµРЅРЅР°СЏ С†РµРїРѕС‡РєР° С„РёР»СЊС‚СЂРѕРІ
+     * @throws Exception РћС€РёР±РєР° РєРѕРЅС„РёРіСѓСЂР°С†РёРё
+     */
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .authorizeHttpRequests(auth -> auth
+                        // РџСѓР±Р»РёС‡РЅС‹Рµ СЂРµСЃСѓСЂСЃС‹ Рё СЃС‚СЂР°РЅРёС†С‹
+                        .requestMatchers("/css/**", "/js/**", "/login", "/", "/logout", "/menu", "/cart/add", "/cart/remove", "/cart/checkout")
+                        .permitAll()
+                        // Р”РѕСЃС‚СѓРї РґР»СЏ СЃРѕС‚СЂСѓРґРЅРёРєРѕРІ Рё Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂРѕРІ
+                        .requestMatchers("/cart/all")
+                        .hasAnyRole("STAFF", "ADMIN")
+                        // Р’СЃРµ РѕСЃС‚Р°Р»СЊРЅС‹Рµ Р·Р°РїСЂРѕСЃС‹ С‚СЂРµР±СѓСЋС‚ СЂРѕР»Рё ADMIN
+                        .anyRequest()
+                        .hasRole("ADMIN")
+                )
+                // РќР°СЃС‚СЂРѕР№РєР° С„РѕСЂРјС‹ РІС…РѕРґР°
+                .formLogin(form -> form
+                        .loginPage("/login") // РљР°СЃС‚РѕРјРЅР°СЏ СЃС‚СЂР°РЅРёС†Р° РІС…РѕРґР°
+                        .successHandler(new SavedRequestAwareAuthenticationSuccessHandler()) // РџРµСЂРµРЅР°РїСЂР°РІР»РµРЅРёРµ РЅР° РёСЃС…РѕРґРЅС‹Р№ URL РїРѕСЃР»Рµ РІС…РѕРґР°
+                        .permitAll()
+                )
+                // РќР°СЃС‚СЂРѕР№РєР° РІС‹С…РѕРґР° РёР· СЃРёСЃС‚РµРјС‹
+                .logout(logout -> logout
+                        .logoutUrl("/logout") // URL РґР»СЏ РІС‹С…РѕРґР° (POST-Р·Р°РїСЂРѕСЃ)
+                        .logoutSuccessUrl("/") // РџРµСЂРµРЅР°РїСЂР°РІР»РµРЅРёРµ РїРѕСЃР»Рµ РІС‹С…РѕРґР°
+                        .invalidateHttpSession(true) // РЈРЅРёС‡С‚РѕР¶РµРЅРёРµ СЃРµСЃСЃРёРё
+                        .deleteCookies("JSESSIONID") // РЈРґР°Р»РµРЅРёРµ РєСѓРєРё
+                        .permitAll()
+                )
+                // РћР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РѕРє РґРѕСЃС‚СѓРїР°
+                .exceptionHandling(handling -> handling
+                        .accessDeniedPage("/login?error=access_denied") // РЎС‚СЂР°РЅРёС†Р° РїСЂРё РѕС‚РєР°Р·Рµ РІ РґРѕСЃС‚СѓРїРµ
+                );
+
+        return http.build();
+    }
+
+    /**
+     * РќР°СЃС‚СЂРѕР№РєР° РєРѕРґРёСЂРѕРІС‰РёРєР° РїР°СЂРѕР»РµР№.
+     * РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ BCrypt РґР»СЏ С…РµС€РёСЂРѕРІР°РЅРёСЏ РїР°СЂРѕР»РµР№.
+     *
+     * @return Р РµР°Р»РёР·Р°С†РёСЏ PasswordEncoder СЃ Р°Р»РіРѕСЂРёС‚РјРѕРј BCrypt
+     */
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+}
+
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Dish.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+/**
+ * Р‘Р°Р·РѕРІС‹Р№ Р°Р±СЃС‚СЂР°РєС‚РЅС‹Р№ РєР»Р°СЃСЃ РґР»СЏ Р±Р»СЋРґ СЃ РѕР±С‰РёРјРё С…Р°СЂР°РєС‚РµСЂРёСЃС‚РёРєР°РјРё.
+ * РСЃРїРѕР»СЊР·СѓРµС‚ SINGLE_TABLE РЅР°СЃР»РµРґРѕРІР°РЅРёРµ СЃ РґРёСЃРєСЂРёРјРёРЅР°С‚РѕСЂРѕРј "DISH".
+ */
+@Entity
+@DiscriminatorValue("DISH")
+public abstract class Dish extends Product {
+
+    public Dish() {
+        super();
+    }
+
+    public Dish(String name, String description, double price) {
+        super(name, description, price);
+    }
+
+
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Menu.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.*;
+
+/**
+ * РЎСѓС‰РЅРѕСЃС‚СЊ РјРµРЅСЋ СЂРµСЃС‚РѕСЂР°РЅР°.
+ * РЎРѕРґРµСЂР¶РёС‚ РЅР°Р·РІР°РЅРёРµ, Р°РґСЂРµСЃ Рё РѕРїРёСЃР°РЅРёРµ Р·Р°РІРµРґРµРЅРёСЏ.
+ */
+@Entity
+@Table(name = "menus")
+public class Menu {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String address; // РђРґСЂРµСЃ Р·Р°РІРµРґРµРЅРёСЏ
+    private String description;
+
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\MenuItem.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.*;
+
+
+
+/**
+ * Р‘Р°Р·РѕРІС‹Р№ РєР»Р°СЃСЃ РґР»СЏ СЌР»РµРјРµРЅС‚РѕРІ РјРµРЅСЋ СЃ SINGLE_TABLE РЅР°СЃР»РµРґРѕРІР°РЅРёРµРј.
+ * РЎРѕРґРµСЂР¶РёС‚ СЃРІСЏР·СЊ ManyToOne СЃ Menu Рё Р±Р°Р·РѕРІС‹Рµ Р°С‚СЂРёР±СѓС‚С‹ РїСЂРѕРґСѓРєС‚Р°.
+ */
+@Entity
+@Table(name = "menu_items")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "dtype", discriminatorType = DiscriminatorType.STRING)
+public abstract class MenuItem {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String description;
+    private double price;
+
+    @ManyToOne
+    @JoinColumn(name = "menu_id")
+    private Menu menu;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+    public Menu getMenu() {
+        return menu;
+    }
+
+    public void setMenu(Menu menu) {
+        this.menu = menu;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Order.java
+================================================================================
+
+package com.example.diplom.model;
+
+
+import jakarta.persistence.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * РЎСѓС‰РЅРѕСЃС‚СЊ Р·Р°РєР°Р·Р° СЃ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРёРј РѕР±РЅРѕРІР»РµРЅРёРµРј СЃС‚Р°С‚СѓСЃР°.
+ * РЎРѕРґРµСЂР¶РёС‚ Р»РѕРіРёРєСѓ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё СЃС‚Р°С‚СѓСЃР° Р·Р°РєР°Р·Р° СЃРѕ СЃС‚Р°С‚СѓСЃР°РјРё РїСЂРѕРґСѓРєС‚РѕРІ.
+ */
+@Entity
+@Table(name = "orders")
+public class Order {
+
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "orders_products",
+            joinColumns = @JoinColumn(name = "order_id"),
+            inverseJoinColumns = @JoinColumn(name="product_id")
+    )
+    private List<Product> products;
+
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status = OrderStatus.NEW;
+
+    public Order() {
+        this.products = new ArrayList<>();
+    }
+
+
+    public Long getId() {
+        return id;
+    }
+
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public List<Product> getProducts() {
+        return products;
+    }
+
+    public void setProducts(List<Product> products) {
+        this.products = products;
+    }
+
+    public OrderStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(OrderStatus status) {
+        this.status = status;
+    }
+
+
+
+    public void addProduct(Product product) {
+        products.add(product);
+        updateOrderStatus();
+    }
+
+
+    private void updateOrderStatus() {
+        boolean allReady = products.stream().allMatch(p -> p.getProductStatus() == ProductStatus.READY);
+        boolean anyInProgress = products.stream().anyMatch(p -> p.getProductStatus() == ProductStatus.IN_PROGRESS);
+
+        if (allReady) {
+            status = OrderStatus.COMPLETED;
+        } else if (anyInProgress) {
+            status = OrderStatus.IN_PROGRESS;
+        } else {
+            status = OrderStatus.NEW;
+        }
+
+
+    }
+
+    public void updateProductStatus(Product product, ProductStatus status) {
+        product.setProductStatus(status);
+        updateOrderStatus();
+    }
+
+
+
+
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\OrderStatus.java
+================================================================================
+
+package com.example.diplom.model;
+
+
+/**
+ * РџРµСЂРµС‡РёСЃР»РµРЅРёРµ СЃС‚Р°С‚СѓСЃРѕРІ Р·Р°РєР°Р·Р°.
+ */
+public enum OrderStatus {
+    NEW, IN_PROGRESS, COMPLETED;
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Pizza.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+
+
+/**
+ * РљРѕРЅРєСЂРµС‚РЅР°СЏ СЂРµР°Р»РёР·Р°С†РёСЏ Р±Р»СЋРґР° - РїРёС†С†Р°.
+ * Р”РѕР±Р°РІР»СЏРµС‚ СѓРЅРёРєР°Р»СЊРЅС‹Р№ Р°С‚СЂРёР±СѓС‚ РґРёР°РјРµС‚СЂР°.
+ */
+@Entity
+@DiscriminatorValue("PIZZA")
+public class Pizza extends Dish {
+    private int diameter; // Р”РёР°РјРµС‚СЂ РїРёС†С†С‹ РІ СЃРј
+
+    public Pizza() {
+        super();
+    }
+
+    public Pizza(String name, String description, double price, int diameter) {
+        super(name, description, price);
+        this.diameter = diameter;
+    }
+
+    public int getDiameter() {
+        return diameter;
+    }
+
+    public void setDiameter(int diameter) {
+        this.diameter = diameter;
+    }
+
+
+
+    @Override
+    public String toString() {
+        return "Pizza{" +
+                "name='" + getName() + '\'' +
+                ", description='" + getDescription() + '\'' +
+                ", price=" + getPrice() +
+                ", diameter=" + diameter +
+                ", progressStatus=" + getProductStatus() +
+                '}';
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\PizzaMenuItem.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+
+
+/**
+ * Р­Р»РµРјРµРЅС‚ РјРµРЅСЋ РґР»СЏ РїРёС†С†С‹.
+ * РќР°СЃР»РµРґСѓРµС‚ Р±Р°Р·РѕРІС‹Рµ Р°С‚СЂРёР±СѓС‚С‹ MenuItem Рё РґРѕР±Р°РІР»СЏРµС‚ РґРёР°РјРµС‚СЂ.
+ */
+@Entity
+@DiscriminatorValue("PIZZA")
+public class PizzaMenuItem extends MenuItem {
+
+    private int diameter; // РЈРЅРёРєР°Р»СЊРЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+
+
+    public int getDiameter() {
+        return diameter;
+    }
+
+    public void setDiameter(int diameter) {
+        this.diameter = diameter;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Product.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.*;
+
+
+
+/**
+ * Р‘Р°Р·РѕРІС‹Р№ РєР»Р°СЃСЃ РїСЂРѕРґСѓРєС‚РѕРІ.
+ * РСЃРїРѕР»СЊР·СѓРµС‚ SINGLE_TABLE РЅР°СЃР»РµРґРѕРІР°РЅРёРµ.
+ */
+@Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "dtype", discriminatorType = DiscriminatorType.STRING)
+@Table(name = "PRODUCTS")
+public abstract class Product {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String name;
+    private String description;
+    private double price;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private ProductStatus productStatus = ProductStatus.NOT_STARTED;
+
+    @Column(name = "menu_id")
+    private Long menuId;
+
+    public Long getMenuId() {
+        return menuId;
+    }
+
+    public void setMenuId(Long menuId) {
+        this.menuId = menuId;
+    }
+
+    public Product(){}
+
+    public Product(String name, String description, double price, Long menuId) {
+        this.name = name;
+        this.description = description;
+        this.price = price;
+        this.menuId = menuId;
+    }
+
+    public Product(String name, String description, double price) {
+        this.name = name;
+        this.description = description;
+        this.price = price;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public ProductStatus getProductStatus() {
+        return productStatus;
+    }
+
+    public void setProductStatus(ProductStatus productStatus) {
+        this.productStatus = productStatus;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
+
+
+
+
+    public void  updateStatus( ProductStatus productStatus){
+        this.productStatus = productStatus;
+    }
+
+    @Override
+    public String toString() {
+        return "Product{" +
+                "name='" + name + '\'' +
+                ", description='" + description + '\'' +
+                ", price=" + price +
+                ", progressStatus=" + productStatus +
+                '}';
+    }
+
+
+
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\ProductStatus.java
+================================================================================
+
+package com.example.diplom.model;
+
+
+/**
+ * РџРµСЂРµС‡РёСЃР»РµРЅРёРµ СЃС‚Р°С‚СѓСЃРѕРІ РїСЂРѕРґСѓРєС‚Р°.
+ */
+public enum ProductStatus {
+    NOT_STARTED, IN_PROGRESS, READY;
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Role.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.*;
+
+
+/**
+ * РЎСѓС‰РЅРѕСЃС‚СЊ СЂРѕР»Рё РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ.
+ * РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РґР»СЏ СЃРёСЃС‚РµРјС‹ Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёРё Рё Р°РІС‚РѕСЂРёР·Р°С†РёРё.
+ */
+@Entity
+@Table(name = "roles")
+public class Role {
+
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+
+    private String name;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\RollDish.java
+================================================================================
+
+package com.example.diplom.model;
+
+
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+
+
+/**
+ * РљРѕРЅРєСЂРµС‚РЅР°СЏ СЂРµР°Р»РёР·Р°С†РёСЏ Р±Р»СЋРґР° - СЂРѕР»Р»С‹.
+ * Р”РѕР±Р°РІР»СЏРµС‚ Р°С‚СЂРёР±СѓС‚ РєРѕР»РёС‡РµСЃС‚РІР° РєСѓСЃРѕС‡РєРѕРІ.
+ */
+@Entity
+@DiscriminatorValue("ROLL")
+public class RollDish extends Dish {
+    private int pieceCount; // Р”РёР°РјРµС‚СЂ РїРёС†С†С‹ РІ СЃРј
+
+    public RollDish() {
+        super();
+    }
+
+    public RollDish (String name, String description, double price, int pieceCount) {
+        super(name, description, price);
+        this.pieceCount = pieceCount;
+    }
+
+    public int getPieceCount() {
+        return pieceCount;
+    }
+
+    public void setPieceCount(int pieceCount) {
+        this.pieceCount = pieceCount;
+    }
+
+
+    @Override
+    public String toString() {
+        return "Roll{" +
+                "name='" + getName() + '\'' +
+                ", description='" + getDescription() + '\'' +
+                ", price=" + getPrice() +
+                ", pieceCount=" + pieceCount +
+                ", progressStatus=" + getProductStatus() +
+                '}';
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\RollMenuItem.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+
+
+
+/**
+ * Р­Р»РµРјРµРЅС‚ РјРµРЅСЋ РґР»СЏ СЂРѕР»Р»РѕРІ.
+ * РќР°СЃР»РµРґСѓРµС‚ Р±Р°Р·РѕРІС‹Рµ Р°С‚СЂРёР±СѓС‚С‹ MenuItem Рё РґРѕР±Р°РІР»СЏРµС‚ РєРѕР»РёС‡РµСЃС‚РІРѕ РєСѓСЃРѕС‡РєРѕРІ.
+ */
+@Entity
+@DiscriminatorValue("ROLL")
+public class RollMenuItem extends MenuItem {
+
+    private int pieceCount; // РЈРЅРёРєР°Р»СЊРЅРѕРµ РїРѕР»Рµ РґР»СЏ СЂРѕР»Р»РѕРІ
+
+    public int getPieceCount() {
+        return pieceCount;
+    }
+
+    public void setPieceCount(int pieceCount) {
+        this.pieceCount = pieceCount;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\User.java
+================================================================================
+
+package com.example.diplom.model;
+
+import jakarta.persistence.*;
+
+import java.util.Set;
+
+
+
+
+/**
+ * РЎСѓС‰РЅРѕСЃС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ СЃ СЂРѕР»СЏРјРё.
+ * РСЃРїРѕР»СЊР·СѓРµС‚ EAGER Р·Р°РіСЂСѓР·РєСѓ РґР»СЏ СЃРІСЏР·РµР№ ManyToMany СЃ Role.
+ */
+@Entity
+@Table(name = "users")
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+
+    private String username;
+    private String password;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "users_roles", // РРјСЏ СЃРІСЏР·СѓСЋС‰РµР№ С‚Р°Р±Р»РёС†С‹
+            joinColumns = @JoinColumn(name = "user_id"), // РљРѕР»РѕРЅРєР° РґР»СЏ User
+            inverseJoinColumns = @JoinColumn(name = "role_id") // РљРѕР»РѕРЅРєР° РґР»СЏ Role
+    )
+    private Set<Role> roles;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public Set<Role> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
+    }
+}
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\DiplomApplication.java
+================================================================================
+
+package com.example.diplom;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class DiplomApplication {
+
+	public static void main(String[] args) {
+
+
+
+		SpringApplication.run(DiplomApplication.class, args);
+	}
+
+}
+
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\resources\application.properties
+================================================================================
+
+spring.application.name=diplom
+spring.jpa.generat-ddl=false
+spring.jpa.hibernate.ddl-auto=none
+
+spring.thymeleaf.prefix=classpath:/templates/
+spring.thymeleaf.suffix=.html
+spring.thymeleaf.cache=false
+
+
+# OAuth2
+jwt.secret=my-secret-key-which-is-very-long-and-secure
+
+# Spring Security
+spring.security.oauth2.resourceserver.jwt.secret-value=${jwt.secret}
+
+
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\resources\data.sql
+================================================================================
+
+
+-- Р—Р°РїРѕР»РЅРµРЅРёРµ С‚Р°Р±Р»РёС†С‹ РјРµРЅСЋ
+INSERT INTO menus (name, address, description) VALUES
+('РћСЃРЅРѕРІРЅРѕРµ РјРµРЅСЋ', 'СѓР». РџСѓС€РєРёРЅР°, 42', 'РњРµРЅСЋ СЂРµСЃС‚РѕСЂР°РЅР° "РС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РєСѓС…РЅСЏ"'),
+('РћСЃРЅРѕРІРЅРѕРµ РјРµРЅСЋ', 'СѓР». Р›РµРЅРёРЅР°, 25', 'РњРµРЅСЋ СЂРµСЃС‚РѕСЂР°РЅР° "РС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РєСѓС…РЅСЏ 2"');
+
+
+INSERT INTO menu_items (name, description, price, diameter, piece_count, dtype, menu_id) VALUES
+-- РџРёС†С†С‹
+('РњР°СЂРіР°СЂРёС‚Р°', 'РљР»Р°СЃСЃРёС‡РµСЃРєР°СЏ РёС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РїРёС†С†Р° СЃ С‚РѕРјР°С‚Р°РјРё Рё РјРѕС†Р°СЂРµР»Р»РѕР№', 9.99, 30, NULL, 'PIZZA', 1),
+('РџРµРїРїРµСЂРѕРЅРё', 'РћСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РєРѕР»Р±Р°СЃРєР°РјРё РїРµРїРїРµСЂРѕРЅРё', 11.99, 30, NULL, 'PIZZA', 1),
+('Р§РµС‚С‹СЂРµ СЃС‹СЂР°', 'РџРёС†С†Р° СЃ СЃС‹СЂР°РјРё РјРѕС†Р°СЂРµР»Р»Р°, РїР°СЂРјРµР·Р°РЅ, РґРѕСЂ Р±Р»СЋ Рё С‡РµРґРґРµСЂ', 12.99, 35, NULL, 'PIZZA', 1),
+('Р“Р°РІР°Р№СЃРєР°СЏ', 'РџРёС†С†Р° СЃ РІРµС‚С‡РёРЅРѕР№ Рё Р°РЅР°РЅР°СЃРѕРј', 10.99, 30, NULL, 'PIZZA', 1),
+('РљР°СЂР±РѕРЅР°СЂР°', 'РџРёС†С†Р° СЃ Р±РµРєРѕРЅРѕРј, СЃР»РёРІРѕС‡РЅС‹Рј СЃРѕСѓСЃРѕРј Рё СЏР№С†РѕРј', 13.99, 35, NULL, 'PIZZA', 1),
+('Р”РёР°Р±Р»Рѕ', 'РћС‡РµРЅСЊ РѕСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РїРµСЂС†РµРј С‡РёР»Рё Рё СЃР°Р»СЏРјРё', 12.99, 30, NULL, 'PIZZA', 1),
+('Р’РµРіРµС‚Р°СЂРёР°РЅСЃРєР°СЏ', 'РџРёС†С†Р° СЃ РѕРІРѕС‰Р°РјРё Рё РіСЂРёР±Р°РјРё', 10.99, 30, NULL, 'PIZZA', 1),
+('РњСЏСЃРЅР°СЏ', 'РџРёС†С†Р° СЃ РІРµС‚С‡РёРЅРѕР№, Р±РµРєРѕРЅРѕРј, РєРѕР»Р±Р°СЃРѕР№ Рё РїРµРїРїРµСЂРѕРЅРё', 14.99, 35, NULL, 'PIZZA', 1),
+('РњРѕСЂРµРїСЂРѕРґСѓРєС‚С‹', 'РџРёС†С†Р° СЃ РєСЂРµРІРµС‚РєР°РјРё, РјРёРґРёСЏРјРё Рё РєР°Р»СЊРјР°СЂР°РјРё', 15.99, 35, NULL, 'PIZZA', 1),
+('РўСЂСЋС„РµР»СЊРЅР°СЏ', 'Р­Р»РёС‚РЅР°СЏ РїРёС†С†Р° СЃ С‚СЂСЋС„РµР»СЊРЅС‹Рј РјР°СЃР»РѕРј Рё РїР°СЂРјРµР·Р°РЅРѕРј', 18.99, 30, NULL, 'PIZZA', 1),
+('РњР°СЂРіР°СЂРёС‚Р°', 'РљР»Р°СЃСЃРёС‡РµСЃРєР°СЏ РёС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РїРёС†С†Р° СЃ С‚РѕРјР°С‚Р°РјРё Рё РјРѕС†Р°СЂРµР»Р»РѕР№', 9.99, 30, NULL, 'PIZZA', 2),
+('РџРµРїРїРµСЂРѕРЅРё', 'РћСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РєРѕР»Р±Р°СЃРєР°РјРё РїРµРїРїРµСЂРѕРЅРё', 11.99, 30, NULL, 'PIZZA', 2),
+('Р§РµС‚С‹СЂРµ СЃС‹СЂР°', 'РџРёС†С†Р° СЃ СЃС‹СЂР°РјРё РјРѕС†Р°СЂРµР»Р»Р°, РїР°СЂРјРµР·Р°РЅ, РґРѕСЂ Р±Р»СЋ Рё С‡РµРґРґРµСЂ', 12.99, 35, NULL, 'PIZZA', 2),
+('Р“Р°РІР°Р№СЃРєР°СЏ', 'РџРёС†С†Р° СЃ РІРµС‚С‡РёРЅРѕР№ Рё Р°РЅР°РЅР°СЃРѕРј', 10.99, 30, NULL, 'PIZZA', 2),
+('РљР°СЂР±РѕРЅР°СЂР°', 'РџРёС†С†Р° СЃ Р±РµРєРѕРЅРѕРј, СЃР»РёРІРѕС‡РЅС‹Рј СЃРѕСѓСЃРѕРј Рё СЏР№С†РѕРј', 13.99, 35, NULL, 'PIZZA', 2),
+('Р”РёР°Р±Р»Рѕ', 'РћС‡РµРЅСЊ РѕСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РїРµСЂС†РµРј С‡РёР»Рё Рё СЃР°Р»СЏРјРё', 12.99, 30, NULL, 'PIZZA', 2),
+-- Р РѕР»Р»С‹
+('Р¤РёР»Р°РґРµР»СЊС„РёСЏ', 'Р РѕР»Р» СЃ Р»РѕСЃРѕСЃРµРј Рё СЃР»РёРІРѕС‡РЅС‹Рј СЃС‹СЂРѕРј', 14.99, NULL, 8, 'ROLL', 1),
+('РљР°Р»РёС„РѕСЂРЅРёСЏ', 'Р РѕР»Р» СЃ РєСЂР°Р±РѕРј Рё Р°РІРѕРєР°РґРѕ', 12.99, NULL, 6, 'ROLL', 1),
+('Р”СЂР°РєРѕРЅ', 'Р РѕР»Р» СЃ СѓРіСЂРµРј Рё Р°РІРѕРєР°РґРѕ', 16.99, NULL, 8, 'ROLL', 1),
+('РђР»СЏСЃРєР°', 'Р РѕР»Р» СЃ Р»РѕСЃРѕСЃРµРј, РѕРіСѓСЂС†РѕРј Рё Р°РІРѕРєР°РґРѕ', 13.99, NULL, 6, 'ROLL', 1),
+('Р‘РѕРЅРёС‚Рѕ', 'Р РѕР»Р» СЃ С‚СѓРЅС†РѕРј Рё СЃС‚СЂСѓР¶РєРѕР№ С‚СѓРЅС†Р°', 15.99, NULL, 8, 'ROLL', 1),
+('Р“РµР№С€Р°', 'Р РѕР»Р» СЃ РєСЂРµРІРµС‚РєРѕР№ Рё СЃРїР°Р№СЃРё СЃРѕСѓСЃРѕРј', 14.99, NULL, 6, 'ROLL', 1),
+('РўРѕРєРёРѕ', 'Р РѕР»Р» СЃ Р»РѕСЃРѕСЃРµРј, С‚СѓРЅС†РѕРј Рё Р°РІРѕРєР°РґРѕ', 17.99, NULL, 8, 'ROLL', 1),
+('РЎР°РєСѓСЂР°', 'Р РѕР»Р» СЃ РєСЂР°Р±РѕРј, РѕРіСѓСЂС†РѕРј Рё РёРєСЂРѕР№', 18.99, NULL, 6, 'ROLL', 1),
+('РЇСЃР°Р№', 'Р’РµРіРµС‚Р°СЂРёР°РЅСЃРєРёР№ СЂРѕР»Р» СЃ Р°РІРѕРєР°РґРѕ Рё РѕРіСѓСЂС†РѕРј', 11.99, NULL, 6, 'ROLL', 1),
+('РЈРЅР°РіРё', 'Р РѕР»Р» СЃ СѓРіСЂРµРј Рё РѕРіСѓСЂС†РѕРј', 19.99, NULL, 8, 'ROLL', 1);
+
+
+INSERT INTO roles (name) VALUES
+('CLIENT'),
+('STAFF'),
+('ADMIN');
+
+INSERT INTO users (username, password) VALUES
+('client', '$2a$10$evuEaL2E6QbMD8x3o1Bt0OGYOqoP936TI8juV5I4obiunO94HVuly'), -- РїР°СЂРѕР»СЊ РІРµР·РґРµ password
+('staff', '$2a$10$evuEaL2E6QbMD8x3o1Bt0OGYOqoP936TI8juV5I4obiunO94HVuly'),
+('admin', '$2a$10$evuEaL2E6QbMD8x3o1Bt0OGYOqoP936TI8juV5I4obiunO94HVuly');
+
+INSERT INTO users_roles (user_id, role_id) VALUES
+(1, 1),
+(2, 2),
+(3, 3);
+
+
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\src\main\resources\schema.sql
+================================================================================
+
+
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РјРµРЅСЋ
+--CREATE TABLE IF NOT EXISTS menus (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    name VARCHAR(255) NOT NULL,
+--    address VARCHAR(255),         -- РђРґСЂРµСЃ Р·Р°РІРµРґРµРЅРёСЏ
+--    description VARCHAR(500)
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЌР»РµРјРµРЅС‚РѕРІ РјРµРЅСЋ (MenuItem)
+--CREATE TABLE IF NOT EXISTS menu_items (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    name VARCHAR(255) NOT NULL,
+--    description VARCHAR(500),
+--    price DOUBLE NOT NULL,
+--    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+--    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, PASTA Рё С‚.Рґ.)
+--    menu_id BIGINT,               -- РЎСЃС‹Р»РєР° РЅР° РјРµРЅСЋ
+--    FOREIGN KEY (menu_id) REFERENCES menus(id)
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ Р·Р°РєР°Р·РѕРІ
+--CREATE TABLE IF NOT EXISTS orders (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    status VARCHAR(50) NOT NULL
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РїСЂРѕРґСѓРєС‚РѕРІ (РґР»СЏ Р·Р°РєР°Р·РѕРІ)
+--CREATE TABLE IF NOT EXISTS products (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, PASTA Рё С‚.Рґ.)
+--    name VARCHAR(255) NOT NULL,
+--    description VARCHAR(500),
+--    price DOUBLE NOT NULL,
+--    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+--    sauce_type VARCHAR(100),      -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїР°СЃС‚С‹
+--    status VARCHAR(50) NOT NULL,
+--    menu_id BIGINT                -- ID РјРµРЅСЋ, РёР· РєРѕС‚РѕСЂРѕРіРѕ РґРѕР±Р°РІР»РµРЅ РїСЂРѕРґСѓРєС‚
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЃРІСЏР·Рё Р·Р°РєР°Р·РѕРІ Рё РїСЂРѕРґСѓРєС‚РѕРІ
+--CREATE TABLE IF NOT EXISTS orders_products (
+--    order_id BIGINT,
+--    product_id BIGINT,
+--    FOREIGN KEY (order_id) REFERENCES orders(id),
+--    FOREIGN KEY (product_id) REFERENCES products(id)
+--);
+
+
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РјРµРЅСЋ
+CREATE TABLE IF NOT EXISTS menus (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    address VARCHAR(255),         -- РђРґСЂРµСЃ Р·Р°РІРµРґРµРЅРёСЏ
+    description VARCHAR(500)
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЌР»РµРјРµРЅС‚РѕРІ РјРµРЅСЋ (MenuItem)
+CREATE TABLE IF NOT EXISTS menu_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, ROLL Рё С‚.Рґ.)
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(500),
+    price DOUBLE NOT NULL,
+    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+    piece_count INT,              -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ СЂРѕР»Р»РѕРІ
+    menu_id BIGINT,               -- РЎСЃС‹Р»РєР° РЅР° РјРµРЅСЋ
+    FOREIGN KEY (menu_id) REFERENCES menus(id)
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ Р·Р°РєР°Р·РѕРІ
+CREATE TABLE IF NOT EXISTS orders (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    status VARCHAR(50) NOT NULL
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РїСЂРѕРґСѓРєС‚РѕРІ (РґР»СЏ Р·Р°РєР°Р·РѕРІ)
+CREATE TABLE IF NOT EXISTS products (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, ROLL Рё С‚.Рґ.)
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(500),
+    price DOUBLE NOT NULL,
+    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+    piece_count INT,              -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ СЂРѕР»Р»РѕРІ
+    status VARCHAR(50) NOT NULL,
+    menu_id BIGINT                -- ID РјРµРЅСЋ, РёР· РєРѕС‚РѕСЂРѕРіРѕ РґРѕР±Р°РІР»РµРЅ РїСЂРѕРґСѓРєС‚
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЃРІСЏР·Рё Р·Р°РєР°Р·РѕРІ Рё РїСЂРѕРґСѓРєС‚РѕРІ
+CREATE TABLE IF NOT EXISTS orders_products (
+    order_id BIGINT,
+    product_id BIGINT,
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+--- РўР°Р±Р»РёС†Р° РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
+ CREATE TABLE IF NOT EXISTS users (
+     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+     username VARCHAR(255) NOT NULL,
+     password VARCHAR(255) NOT NULL
+ );
+
+ -- РўР°Р±Р»РёС†Р° СЂРѕР»РµР№
+ CREATE TABLE IF NOT EXISTS roles (
+     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+     name VARCHAR(255) NOT NULL
+ );
+
+ -- РЎРІСЏР·СѓСЋС‰Р°СЏ С‚Р°Р±Р»РёС†Р° РґР»СЏ many-to-many
+CREATE TABLE users_roles (
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+    PRIMARY KEY (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (role_id) REFERENCES roles(id)
+);
+
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\target\classes\templates\fragments\cart-content.html
+================================================================================
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="cart-content(total)">
+    <div th:if="${not #lists.isEmpty(session.cart)}">
+        <div class="cart-item mb-3" th:each="item : ${session.cart}">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="me-3">
+                    <h5 th:text="${item.name}"></h5>
+                    <small class="text-muted" th:text="${item.description}"></small>
+                </div>
+                <div class="text-end">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-primary" th:text="'в‚Ѕ' + ${#numbers.formatDecimal(item.price, 1, 2)}"></span>
+                        <form th:action="@{/cart/remove}" method="post">
+                            <input type="hidden" name="menuItemId" th:value="${item.id}">
+                            <button type="submit" class="btn btn-danger btn-sm">
+                                &times;
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="total-price py-3 border-top">
+            <h5 class="d-flex justify-content-between">
+                <span>РС‚РѕРіРѕ:</span>
+                <span th:text="'в‚Ѕ' + ${total != null ? #numbers.formatDecimal(total, 1, 2) : '0.00'}"></span>
+            </h5>
+        </div>
+
+        <form th:action="@{/cart/checkout}" method="post">
+            <button type="submit" class="btn btn-success w-100">
+                РћС„РѕСЂРјРёС‚СЊ Р·Р°РєР°Р·
+            </button>
+        </form>
+    </div>
+</div>
+</body>
+</html>
+
+
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\target\classes\application.properties
+================================================================================
+
+spring.application.name=diplom
+spring.jpa.generat-ddl=false
+spring.jpa.hibernate.ddl-auto=none
+
+spring.thymeleaf.prefix=classpath:/templates/
+spring.thymeleaf.suffix=.html
+spring.thymeleaf.cache=false
+
+
+# OAuth2
+jwt.secret=my-secret-key-which-is-very-long-and-secure
+
+# Spring Security
+spring.security.oauth2.resourceserver.jwt.secret-value=${jwt.secret}
+
+
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\target\classes\data.sql
+================================================================================
+
+
+-- Р—Р°РїРѕР»РЅРµРЅРёРµ С‚Р°Р±Р»РёС†С‹ РјРµРЅСЋ
+INSERT INTO menus (name, address, description) VALUES
+('РћСЃРЅРѕРІРЅРѕРµ РјРµРЅСЋ', 'СѓР». РџСѓС€РєРёРЅР°, 42', 'РњРµРЅСЋ СЂРµСЃС‚РѕСЂР°РЅР° "РС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РєСѓС…РЅСЏ"'),
+('РћСЃРЅРѕРІРЅРѕРµ РјРµРЅСЋ', 'СѓР». Р›РµРЅРёРЅР°, 25', 'РњРµРЅСЋ СЂРµСЃС‚РѕСЂР°РЅР° "РС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РєСѓС…РЅСЏ 2"');
+
+
+INSERT INTO menu_items (name, description, price, diameter, piece_count, dtype, menu_id) VALUES
+-- РџРёС†С†С‹
+('РњР°СЂРіР°СЂРёС‚Р°', 'РљР»Р°СЃСЃРёС‡РµСЃРєР°СЏ РёС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РїРёС†С†Р° СЃ С‚РѕРјР°С‚Р°РјРё Рё РјРѕС†Р°СЂРµР»Р»РѕР№', 9.99, 30, NULL, 'PIZZA', 1),
+('РџРµРїРїРµСЂРѕРЅРё', 'РћСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РєРѕР»Р±Р°СЃРєР°РјРё РїРµРїРїРµСЂРѕРЅРё', 11.99, 30, NULL, 'PIZZA', 1),
+('Р§РµС‚С‹СЂРµ СЃС‹СЂР°', 'РџРёС†С†Р° СЃ СЃС‹СЂР°РјРё РјРѕС†Р°СЂРµР»Р»Р°, РїР°СЂРјРµР·Р°РЅ, РґРѕСЂ Р±Р»СЋ Рё С‡РµРґРґРµСЂ', 12.99, 35, NULL, 'PIZZA', 1),
+('Р“Р°РІР°Р№СЃРєР°СЏ', 'РџРёС†С†Р° СЃ РІРµС‚С‡РёРЅРѕР№ Рё Р°РЅР°РЅР°СЃРѕРј', 10.99, 30, NULL, 'PIZZA', 1),
+('РљР°СЂР±РѕРЅР°СЂР°', 'РџРёС†С†Р° СЃ Р±РµРєРѕРЅРѕРј, СЃР»РёРІРѕС‡РЅС‹Рј СЃРѕСѓСЃРѕРј Рё СЏР№С†РѕРј', 13.99, 35, NULL, 'PIZZA', 1),
+('Р”РёР°Р±Р»Рѕ', 'РћС‡РµРЅСЊ РѕСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РїРµСЂС†РµРј С‡РёР»Рё Рё СЃР°Р»СЏРјРё', 12.99, 30, NULL, 'PIZZA', 1),
+('Р’РµРіРµС‚Р°СЂРёР°РЅСЃРєР°СЏ', 'РџРёС†С†Р° СЃ РѕРІРѕС‰Р°РјРё Рё РіСЂРёР±Р°РјРё', 10.99, 30, NULL, 'PIZZA', 1),
+('РњСЏСЃРЅР°СЏ', 'РџРёС†С†Р° СЃ РІРµС‚С‡РёРЅРѕР№, Р±РµРєРѕРЅРѕРј, РєРѕР»Р±Р°СЃРѕР№ Рё РїРµРїРїРµСЂРѕРЅРё', 14.99, 35, NULL, 'PIZZA', 1),
+('РњРѕСЂРµРїСЂРѕРґСѓРєС‚С‹', 'РџРёС†С†Р° СЃ РєСЂРµРІРµС‚РєР°РјРё, РјРёРґРёСЏРјРё Рё РєР°Р»СЊРјР°СЂР°РјРё', 15.99, 35, NULL, 'PIZZA', 1),
+('РўСЂСЋС„РµР»СЊРЅР°СЏ', 'Р­Р»РёС‚РЅР°СЏ РїРёС†С†Р° СЃ С‚СЂСЋС„РµР»СЊРЅС‹Рј РјР°СЃР»РѕРј Рё РїР°СЂРјРµР·Р°РЅРѕРј', 18.99, 30, NULL, 'PIZZA', 1),
+('РњР°СЂРіР°СЂРёС‚Р°', 'РљР»Р°СЃСЃРёС‡РµСЃРєР°СЏ РёС‚Р°Р»СЊСЏРЅСЃРєР°СЏ РїРёС†С†Р° СЃ С‚РѕРјР°С‚Р°РјРё Рё РјРѕС†Р°СЂРµР»Р»РѕР№', 9.99, 30, NULL, 'PIZZA', 2),
+('РџРµРїРїРµСЂРѕРЅРё', 'РћСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РєРѕР»Р±Р°СЃРєР°РјРё РїРµРїРїРµСЂРѕРЅРё', 11.99, 30, NULL, 'PIZZA', 2),
+('Р§РµС‚С‹СЂРµ СЃС‹СЂР°', 'РџРёС†С†Р° СЃ СЃС‹СЂР°РјРё РјРѕС†Р°СЂРµР»Р»Р°, РїР°СЂРјРµР·Р°РЅ, РґРѕСЂ Р±Р»СЋ Рё С‡РµРґРґРµСЂ', 12.99, 35, NULL, 'PIZZA', 2),
+('Р“Р°РІР°Р№СЃРєР°СЏ', 'РџРёС†С†Р° СЃ РІРµС‚С‡РёРЅРѕР№ Рё Р°РЅР°РЅР°СЃРѕРј', 10.99, 30, NULL, 'PIZZA', 2),
+('РљР°СЂР±РѕРЅР°СЂР°', 'РџРёС†С†Р° СЃ Р±РµРєРѕРЅРѕРј, СЃР»РёРІРѕС‡РЅС‹Рј СЃРѕСѓСЃРѕРј Рё СЏР№С†РѕРј', 13.99, 35, NULL, 'PIZZA', 2),
+('Р”РёР°Р±Р»Рѕ', 'РћС‡РµРЅСЊ РѕСЃС‚СЂР°СЏ РїРёС†С†Р° СЃ РїРµСЂС†РµРј С‡РёР»Рё Рё СЃР°Р»СЏРјРё', 12.99, 30, NULL, 'PIZZA', 2),
+-- Р РѕР»Р»С‹
+('Р¤РёР»Р°РґРµР»СЊС„РёСЏ', 'Р РѕР»Р» СЃ Р»РѕСЃРѕСЃРµРј Рё СЃР»РёРІРѕС‡РЅС‹Рј СЃС‹СЂРѕРј', 14.99, NULL, 8, 'ROLL', 1),
+('РљР°Р»РёС„РѕСЂРЅРёСЏ', 'Р РѕР»Р» СЃ РєСЂР°Р±РѕРј Рё Р°РІРѕРєР°РґРѕ', 12.99, NULL, 6, 'ROLL', 1),
+('Р”СЂР°РєРѕРЅ', 'Р РѕР»Р» СЃ СѓРіСЂРµРј Рё Р°РІРѕРєР°РґРѕ', 16.99, NULL, 8, 'ROLL', 1),
+('РђР»СЏСЃРєР°', 'Р РѕР»Р» СЃ Р»РѕСЃРѕСЃРµРј, РѕРіСѓСЂС†РѕРј Рё Р°РІРѕРєР°РґРѕ', 13.99, NULL, 6, 'ROLL', 1),
+('Р‘РѕРЅРёС‚Рѕ', 'Р РѕР»Р» СЃ С‚СѓРЅС†РѕРј Рё СЃС‚СЂСѓР¶РєРѕР№ С‚СѓРЅС†Р°', 15.99, NULL, 8, 'ROLL', 1),
+('Р“РµР№С€Р°', 'Р РѕР»Р» СЃ РєСЂРµРІРµС‚РєРѕР№ Рё СЃРїР°Р№СЃРё СЃРѕСѓСЃРѕРј', 14.99, NULL, 6, 'ROLL', 1),
+('РўРѕРєРёРѕ', 'Р РѕР»Р» СЃ Р»РѕСЃРѕСЃРµРј, С‚СѓРЅС†РѕРј Рё Р°РІРѕРєР°РґРѕ', 17.99, NULL, 8, 'ROLL', 1),
+('РЎР°РєСѓСЂР°', 'Р РѕР»Р» СЃ РєСЂР°Р±РѕРј, РѕРіСѓСЂС†РѕРј Рё РёРєСЂРѕР№', 18.99, NULL, 6, 'ROLL', 1),
+('РЇСЃР°Р№', 'Р’РµРіРµС‚Р°СЂРёР°РЅСЃРєРёР№ СЂРѕР»Р» СЃ Р°РІРѕРєР°РґРѕ Рё РѕРіСѓСЂС†РѕРј', 11.99, NULL, 6, 'ROLL', 1),
+('РЈРЅР°РіРё', 'Р РѕР»Р» СЃ СѓРіСЂРµРј Рё РѕРіСѓСЂС†РѕРј', 19.99, NULL, 8, 'ROLL', 1);
+
+
+INSERT INTO roles (name) VALUES
+('CLIENT'),
+('STAFF'),
+('ADMIN');
+
+INSERT INTO users (username, password) VALUES
+('client', '$2a$10$evuEaL2E6QbMD8x3o1Bt0OGYOqoP936TI8juV5I4obiunO94HVuly'), -- РїР°СЂРѕР»СЊ РІРµР·РґРµ password
+('staff', '$2a$10$evuEaL2E6QbMD8x3o1Bt0OGYOqoP936TI8juV5I4obiunO94HVuly'),
+('admin', '$2a$10$evuEaL2E6QbMD8x3o1Bt0OGYOqoP936TI8juV5I4obiunO94HVuly');
+
+INSERT INTO users_roles (user_id, role_id) VALUES
+(1, 1),
+(2, 2),
+(3, 3);
+
+
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\target\classes\schema.sql
+================================================================================
+
+
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РјРµРЅСЋ
+--CREATE TABLE IF NOT EXISTS menus (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    name VARCHAR(255) NOT NULL,
+--    address VARCHAR(255),         -- РђРґСЂРµСЃ Р·Р°РІРµРґРµРЅРёСЏ
+--    description VARCHAR(500)
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЌР»РµРјРµРЅС‚РѕРІ РјРµРЅСЋ (MenuItem)
+--CREATE TABLE IF NOT EXISTS menu_items (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    name VARCHAR(255) NOT NULL,
+--    description VARCHAR(500),
+--    price DOUBLE NOT NULL,
+--    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+--    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, PASTA Рё С‚.Рґ.)
+--    menu_id BIGINT,               -- РЎСЃС‹Р»РєР° РЅР° РјРµРЅСЋ
+--    FOREIGN KEY (menu_id) REFERENCES menus(id)
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ Р·Р°РєР°Р·РѕРІ
+--CREATE TABLE IF NOT EXISTS orders (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    status VARCHAR(50) NOT NULL
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РїСЂРѕРґСѓРєС‚РѕРІ (РґР»СЏ Р·Р°РєР°Р·РѕРІ)
+--CREATE TABLE IF NOT EXISTS products (
+--    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+--    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, PASTA Рё С‚.Рґ.)
+--    name VARCHAR(255) NOT NULL,
+--    description VARCHAR(500),
+--    price DOUBLE NOT NULL,
+--    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+--    sauce_type VARCHAR(100),      -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїР°СЃС‚С‹
+--    status VARCHAR(50) NOT NULL,
+--    menu_id BIGINT                -- ID РјРµРЅСЋ, РёР· РєРѕС‚РѕСЂРѕРіРѕ РґРѕР±Р°РІР»РµРЅ РїСЂРѕРґСѓРєС‚
+--);
+--
+---- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЃРІСЏР·Рё Р·Р°РєР°Р·РѕРІ Рё РїСЂРѕРґСѓРєС‚РѕРІ
+--CREATE TABLE IF NOT EXISTS orders_products (
+--    order_id BIGINT,
+--    product_id BIGINT,
+--    FOREIGN KEY (order_id) REFERENCES orders(id),
+--    FOREIGN KEY (product_id) REFERENCES products(id)
+--);
+
+
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РјРµРЅСЋ
+CREATE TABLE IF NOT EXISTS menus (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    address VARCHAR(255),         -- РђРґСЂРµСЃ Р·Р°РІРµРґРµРЅРёСЏ
+    description VARCHAR(500)
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЌР»РµРјРµРЅС‚РѕРІ РјРµРЅСЋ (MenuItem)
+CREATE TABLE IF NOT EXISTS menu_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, ROLL Рё С‚.Рґ.)
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(500),
+    price DOUBLE NOT NULL,
+    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+    piece_count INT,              -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ СЂРѕР»Р»РѕРІ
+    menu_id BIGINT,               -- РЎСЃС‹Р»РєР° РЅР° РјРµРЅСЋ
+    FOREIGN KEY (menu_id) REFERENCES menus(id)
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ Р·Р°РєР°Р·РѕРІ
+CREATE TABLE IF NOT EXISTS orders (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    status VARCHAR(50) NOT NULL
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ РїСЂРѕРґСѓРєС‚РѕРІ (РґР»СЏ Р·Р°РєР°Р·РѕРІ)
+CREATE TABLE IF NOT EXISTS products (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dtype VARCHAR(50) NOT NULL,   -- Р”РёСЃРєСЂРёРјРёРЅР°С‚РѕСЂ (PIZZA, ROLL Рё С‚.Рґ.)
+    name VARCHAR(255) NOT NULL,
+    description VARCHAR(500),
+    price DOUBLE NOT NULL,
+    diameter INT,                 -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ РїРёС†С†С‹
+    piece_count INT,              -- РЎРїРµС†РёС„РёС‡РЅРѕРµ РїРѕР»Рµ РґР»СЏ СЂРѕР»Р»РѕРІ
+    status VARCHAR(50) NOT NULL,
+    menu_id BIGINT                -- ID РјРµРЅСЋ, РёР· РєРѕС‚РѕСЂРѕРіРѕ РґРѕР±Р°РІР»РµРЅ РїСЂРѕРґСѓРєС‚
+);
+
+-- РЎРѕР·РґР°РЅРёРµ С‚Р°Р±Р»РёС†С‹ СЃРІСЏР·Рё Р·Р°РєР°Р·РѕРІ Рё РїСЂРѕРґСѓРєС‚РѕРІ
+CREATE TABLE IF NOT EXISTS orders_products (
+    order_id BIGINT,
+    product_id BIGINT,
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+--- РўР°Р±Р»РёС†Р° РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
+ CREATE TABLE IF NOT EXISTS users (
+     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+     username VARCHAR(255) NOT NULL,
+     password VARCHAR(255) NOT NULL
+ );
+
+ -- РўР°Р±Р»РёС†Р° СЂРѕР»РµР№
+ CREATE TABLE IF NOT EXISTS roles (
+     id BIGINT PRIMARY KEY AUTO_INCREMENT,
+     name VARCHAR(255) NOT NULL
+ );
+
+ -- РЎРІСЏР·СѓСЋС‰Р°СЏ С‚Р°Р±Р»РёС†Р° РґР»СЏ many-to-many
+CREATE TABLE users_roles (
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+    PRIMARY KEY (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (role_id) REFERENCES roles(id)
+);
+
+================================================================================
+Файл: D:\обучение\Diplom\diplom\pom.xml
+================================================================================
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.4.2</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	<groupId>com.example</groupId>
+	<artifactId>diplom</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>diplom</name>
+	<description>Demo project for Spring Boot</description>
+	<url/>
+	<licenses>
+		<license/>
+	</licenses>
+	<developers>
+		<developer/>
+	</developers>
+	<scm>
+		<connection/>
+		<developerConnection/>
+		<tag/>
+		<url/>
+	</scm>
+	<properties>
+		<java.version>17</java.version>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jdbc</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<!-- Spring Security OAuth2 -->
+
+		<dependency>
+			<groupId>org.thymeleaf.extras</groupId>
+			<artifactId>thymeleaf-extras-springsecurity6</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.auth0</groupId>
+			<artifactId>java-jwt</artifactId>
+			<version>4.4.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.springframework.security/spring-security-test -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
+			<version>6.3.3</version>
+			<scope>test</scope>
+		</dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+        </dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

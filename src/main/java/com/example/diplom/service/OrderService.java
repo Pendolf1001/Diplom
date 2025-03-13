@@ -200,8 +200,6 @@ public class OrderService {
                 .map(order -> {
                     double total = calculateOrderTotal(order.getId());
                     OrderResponse response = orderToOrderResponse(order, total);
-
-
                     // Проверяем, есть ли продукты в заказе
                     if (!order.getProducts().isEmpty()) {
                         Product firstProduct = order.getProducts().get(0);

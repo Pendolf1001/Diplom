@@ -8,7 +8,10 @@ package com.example.diplom.model;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 
-
+/**
+ * Р‘Р°Р·РѕРІС‹Р№ Р°Р±СЃС‚СЂР°РєС‚РЅС‹Р№ РєР»Р°СЃСЃ РґР»СЏ Р±Р»СЋРґ СЃ РѕР±С‰РёРјРё С…Р°СЂР°РєС‚РµСЂРёСЃС‚РёРєР°РјРё.
+ * РСЃРїРѕР»СЊР·СѓРµС‚ SINGLE_TABLE РЅР°СЃР»РµРґРѕРІР°РЅРёРµ СЃ РґРёСЃРєСЂРёРјРёРЅР°С‚РѕСЂРѕРј "DISH".
+ */
 @Entity
 @DiscriminatorValue("DISH")
 public abstract class Dish extends Product {
@@ -21,8 +24,7 @@ public abstract class Dish extends Product {
         super(name, description, price);
     }
 
-    @Override
-    public abstract Dish clone();
+
 }
 
 ================================================================================
@@ -33,6 +35,10 @@ package com.example.diplom.model;
 
 import jakarta.persistence.*;
 
+/**
+ * РЎСѓС‰РЅРѕСЃС‚СЊ РјРµРЅСЋ СЂРµСЃС‚РѕСЂР°РЅР°.
+ * РЎРѕРґРµСЂР¶РёС‚ РЅР°Р·РІР°РЅРёРµ, Р°РґСЂРµСЃ Рё РѕРїРёСЃР°РЅРёРµ Р·Р°РІРµРґРµРЅРёСЏ.
+ */
 @Entity
 @Table(name = "menus")
 public class Menu {
@@ -87,6 +93,12 @@ package com.example.diplom.model;
 
 import jakarta.persistence.*;
 
+
+
+/**
+ * Р‘Р°Р·РѕРІС‹Р№ РєР»Р°СЃСЃ РґР»СЏ СЌР»РµРјРµРЅС‚РѕРІ РјРµРЅСЋ СЃ SINGLE_TABLE РЅР°СЃР»РµРґРѕРІР°РЅРёРµРј.
+ * РЎРѕРґРµСЂР¶РёС‚ СЃРІСЏР·СЊ ManyToOne СЃ Menu Рё Р±Р°Р·РѕРІС‹Рµ Р°С‚СЂРёР±СѓС‚С‹ РїСЂРѕРґСѓРєС‚Р°.
+ */
 @Entity
 @Table(name = "menu_items")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
@@ -157,7 +169,10 @@ import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
-
+/**
+ * РЎСѓС‰РЅРѕСЃС‚СЊ Р·Р°РєР°Р·Р° СЃ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРёРј РѕР±РЅРѕРІР»РµРЅРёРµРј СЃС‚Р°С‚СѓСЃР°.
+ * РЎРѕРґРµСЂР¶РёС‚ Р»РѕРіРёРєСѓ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё СЃС‚Р°С‚СѓСЃР° Р·Р°РєР°Р·Р° СЃРѕ СЃС‚Р°С‚СѓСЃР°РјРё РїСЂРѕРґСѓРєС‚РѕРІ.
+ */
 @Entity
 @Table(name = "orders")
 public class Order {
@@ -247,6 +262,10 @@ public class Order {
 
 package com.example.diplom.model;
 
+
+/**
+ * РџРµСЂРµС‡РёСЃР»РµРЅРёРµ СЃС‚Р°С‚СѓСЃРѕРІ Р·Р°РєР°Р·Р°.
+ */
 public enum OrderStatus {
     NEW, IN_PROGRESS, COMPLETED;
 }
@@ -260,6 +279,12 @@ package com.example.diplom.model;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 
+
+
+/**
+ * РљРѕРЅРєСЂРµС‚РЅР°СЏ СЂРµР°Р»РёР·Р°С†РёСЏ Р±Р»СЋРґР° - РїРёС†С†Р°.
+ * Р”РѕР±Р°РІР»СЏРµС‚ СѓРЅРёРєР°Р»СЊРЅС‹Р№ Р°С‚СЂРёР±СѓС‚ РґРёР°РјРµС‚СЂР°.
+ */
 @Entity
 @DiscriminatorValue("PIZZA")
 public class Pizza extends Dish {
@@ -282,13 +307,7 @@ public class Pizza extends Dish {
         this.diameter = diameter;
     }
 
-    @Override
-    public Pizza clone() {
-        Pizza clone = new Pizza(this.getName(), this.getDescription(), this.getPrice(), this.diameter);
-        clone.setId(null); // РЎР±СЂР°СЃС‹РІР°РµРј ID РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕР№ Р·Р°РїРёСЃРё
-        clone.setProductStatus(this.getProductStatus());
-        return clone;
-    }
+
 
     @Override
     public String toString() {
@@ -311,6 +330,12 @@ package com.example.diplom.model;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 
+
+
+/**
+ * Р­Р»РµРјРµРЅС‚ РјРµРЅСЋ РґР»СЏ РїРёС†С†С‹.
+ * РќР°СЃР»РµРґСѓРµС‚ Р±Р°Р·РѕРІС‹Рµ Р°С‚СЂРёР±СѓС‚С‹ MenuItem Рё РґРѕР±Р°РІР»СЏРµС‚ РґРёР°РјРµС‚СЂ.
+ */
 @Entity
 @DiscriminatorValue("PIZZA")
 public class PizzaMenuItem extends MenuItem {
@@ -335,11 +360,17 @@ package com.example.diplom.model;
 
 import jakarta.persistence.*;
 
+
+
+/**
+ * Р‘Р°Р·РѕРІС‹Р№ РєР»Р°СЃСЃ РїСЂРѕРґСѓРєС‚РѕРІ.
+ * РСЃРїРѕР»СЊР·СѓРµС‚ SINGLE_TABLE РЅР°СЃР»РµРґРѕРІР°РЅРёРµ.
+ */
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @DiscriminatorColumn(name = "dtype", discriminatorType = DiscriminatorType.STRING)
 @Table(name = "PRODUCTS")
-public abstract class Product implements Prototype {
+public abstract class Product {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -436,8 +467,7 @@ public abstract class Product implements Prototype {
                 '}';
     }
 
-    @Override
-    public abstract Prototype clone();
+
 
 }
 
@@ -447,19 +477,12 @@ public abstract class Product implements Prototype {
 
 package com.example.diplom.model;
 
+
+/**
+ * РџРµСЂРµС‡РёСЃР»РµРЅРёРµ СЃС‚Р°С‚СѓСЃРѕРІ РїСЂРѕРґСѓРєС‚Р°.
+ */
 public enum ProductStatus {
     NOT_STARTED, IN_PROGRESS, READY;
-}
-
-================================================================================
-Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\model\Prototype.java
-================================================================================
-
-package com.example.diplom.model;
-
-public interface Prototype {
-
-    public Prototype clone();
 }
 
 ================================================================================
@@ -470,6 +493,11 @@ package com.example.diplom.model;
 
 import jakarta.persistence.*;
 
+
+/**
+ * РЎСѓС‰РЅРѕСЃС‚СЊ СЂРѕР»Рё РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ.
+ * РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РґР»СЏ СЃРёСЃС‚РµРјС‹ Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёРё Рё Р°РІС‚РѕСЂРёР·Р°С†РёРё.
+ */
 @Entity
 @Table(name = "roles")
 public class Role {
@@ -509,6 +537,12 @@ package com.example.diplom.model;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 
+
+
+/**
+ * РљРѕРЅРєСЂРµС‚РЅР°СЏ СЂРµР°Р»РёР·Р°С†РёСЏ Р±Р»СЋРґР° - СЂРѕР»Р»С‹.
+ * Р”РѕР±Р°РІР»СЏРµС‚ Р°С‚СЂРёР±СѓС‚ РєРѕР»РёС‡РµСЃС‚РІР° РєСѓСЃРѕС‡РєРѕРІ.
+ */
 @Entity
 @DiscriminatorValue("ROLL")
 public class RollDish extends Dish {
@@ -531,13 +565,6 @@ public class RollDish extends Dish {
         this.pieceCount = pieceCount;
     }
 
-    @Override
-    public RollDish clone() {
-        RollDish clone = new RollDish(this.getName(), this.getDescription(), this.getPrice(), this.pieceCount);
-        clone.setId(null); // РЎР±СЂР°СЃС‹РІР°РµРј ID РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РЅРѕРІРѕР№ Р·Р°РїРёСЃРё
-        clone.setProductStatus(this.getProductStatus());
-        return clone;
-    }
 
     @Override
     public String toString() {
@@ -560,6 +587,12 @@ package com.example.diplom.model;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 
+
+
+/**
+ * Р­Р»РµРјРµРЅС‚ РјРµРЅСЋ РґР»СЏ СЂРѕР»Р»РѕРІ.
+ * РќР°СЃР»РµРґСѓРµС‚ Р±Р°Р·РѕРІС‹Рµ Р°С‚СЂРёР±СѓС‚С‹ MenuItem Рё РґРѕР±Р°РІР»СЏРµС‚ РєРѕР»РёС‡РµСЃС‚РІРѕ РєСѓСЃРѕС‡РєРѕРІ.
+ */
 @Entity
 @DiscriminatorValue("ROLL")
 public class RollMenuItem extends MenuItem {
@@ -585,6 +618,13 @@ import jakarta.persistence.*;
 
 import java.util.Set;
 
+
+
+
+/**
+ * РЎСѓС‰РЅРѕСЃС‚СЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ СЃ СЂРѕР»СЏРјРё.
+ * РСЃРїРѕР»СЊР·СѓРµС‚ EAGER Р·Р°РіСЂСѓР·РєСѓ РґР»СЏ СЃРІСЏР·РµР№ ManyToMany СЃ Role.
+ */
 @Entity
 @Table(name = "users")
 public class User {

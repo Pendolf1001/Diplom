@@ -29,7 +29,8 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(auth -> auth
                         // Публичные ресурсы и страницы
-                        .requestMatchers("/css/**", "/js/**", "/login", "/", "/logout", "/menu", "/cart/add", "/cart/remove", "/cart/checkout")
+                        .requestMatchers("/css/**", "/js/**", "/login", "/", "/logout",
+                                "/menu", "/cart/add", "/cart/remove", "/cart/checkout")
                         .permitAll()
                         // Доступ для сотрудников и администраторов
                         .requestMatchers("/cart/all")

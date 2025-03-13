@@ -1,49 +1,5 @@
 ﻿
 ================================================================================
-Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\service\CustomUserDetailsService.java
-================================================================================
-
-package com.example.diplom.service;
-
-import com.example.diplom.model.User;
-import com.example.diplom.model.Role;
-import com.example.diplom.repositories.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.stereotype.Service;
-
-/**
- * Р РµР°Р»РёР·Р°С†РёСЏ UserDetailsService РґР»СЏ Р·Р°РіСЂСѓР·РєРё РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… РґР°РЅРЅС‹С….
- */
-@Service
-public class CustomUserDetailsService implements UserDetailsService {
-    @Autowired
-    private UserRepository userRepository;
-
-    /**
-     * Р—Р°РіСЂСѓР¶Р°РµС‚ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРѕ РёРјРµРЅРё РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ.
-     *
-     * @param username РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
-     * @return UserDetails РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
-     * @throws UsernameNotFoundException РµСЃР»Рё РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ
-     */
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        return org.springframework.security.core.userdetails.User.builder()
-                .username(user.getUsername())
-                .password(user.getPassword())
-                .roles(user.getRoles().stream()
-                        .map(Role::getName)
-                        .toArray(String[]::new))
-                .build();
-    }
-}
-
-================================================================================
 Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\service\MenuService.java
 ================================================================================
 
@@ -1487,390 +1443,342 @@ public class MainController {
     }
 }
 
-================================================================================
-Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\controllers\MenuController.java
-================================================================================
 
-package com.example.diplom.controllers;
+index.html
 
-import com.example.diplom.model.*;
-import com.example.diplom.service.MenuService;
-import com.example.diplom.service.OrderService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-import java.util.ArrayList;
-import java.util.List;
+    <!-- Подключение Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 
+    <!-- Подключение собственных стилей -->
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
 
-/**
- * REST-РєРѕРЅС‚СЂРѕР»Р»РµСЂ РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ РјРµРЅСЋ.
- */
-@RestController
-@RequestMapping("/menus")
-@RequiredArgsConstructor
-public class MenuController {
-    private final MenuService menuService;
+    <title>Главная страница</title>
+</head>
+<body class="bg-light">
 
-    /**
-     * РЎРѕР·РґР°РµС‚ РЅРѕРІРѕРµ РјРµРЅСЋ.
-     *
-     * @param menu РћР±СЉРµРєС‚ РјРµРЅСЋ РґР»СЏ СЃРѕР·РґР°РЅРёСЏ
-     * @return РЎРѕР·РґР°РЅРЅРѕРµ РјРµРЅСЋ РІ С‚РµР»Рµ РѕС‚РІРµС‚Р°
-     */
-    @PostMapping
-    public ResponseEntity<Menu> createMenu(@RequestBody Menu menu) {
-        return ResponseEntity.ok(menuService.createMenu(menu));
-    }
+<!-- Блок авторизации>-->
+<div class="auth-section" style="position: absolute; top: 20px; left: 20px;">
+    <div th:if="${#authorization.expression('isAuthenticated()')}">
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+                Выйти ([[${#authentication.principal.username}]])
+            </button>
+        </form>
+    </div>
+    <div th:unless="${#authorization.expression('isAuthenticated()')}">
+        <form th:action="@{/login}" method="post" class="d-flex gap-2">
+            <input type="text" name="username" placeholder="Логин" class="form-control form-control-sm">
+            <input type="password" name="password" placeholder="Пароль" class="form-control form-control-sm">
+            <button type="submit" class="btn btn-primary btn-sm">Войти</button>
+        </form>
+        <div th:if="${param.error}" class="text-danger mt-1">Ошибка авторизации!</div>
+    </div>
+</div>
 
-    /**
-     * Р”РѕР±Р°РІР»СЏРµС‚ РїРёС†С†Сѓ РІ РјРµРЅСЋ.
-     *
-     * @param menuId ID РјРµРЅСЋ
-     * @param pizza  Р”Р°РЅРЅС‹Рµ РїРёС†С†С‹
-     * @return РЎРѕС…СЂР°РЅРµРЅРЅР°СЏ РїРёС†С†Р° РІ С‚РµР»Рµ РѕС‚РІРµС‚Р°
-     */
-    @PostMapping("/{menuId}/pizzas")
-    public ResponseEntity<PizzaMenuItem> addPizzaToMenu(
-            @PathVariable Long menuId,
-            @RequestBody PizzaMenuItem pizza) {
-        PizzaMenuItem savedPizza;
-        try {
-            savedPizza = (PizzaMenuItem) menuService.addItemToMenu(menuId, pizza);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new PizzaMenuItem());
-        }
-        return new ResponseEntity<>(savedPizza, HttpStatus.CREATED);
-    }
+<div class="container mt-5" style="padding-top: 120px;">
+    <div class="card shadow">
+        <div class="card-body">
+            <h1 class="text-center mb-4 text-primary" th:text="${message}"></h1>
 
-    /**
-     * Р”РѕР±Р°РІР»СЏРµС‚ СЂРѕР»Р»С‹ РІ РјРµРЅСЋ.
-     *
-     * @param menuId ID РјРµРЅСЋ
-     * @param roll   Р”Р°РЅРЅС‹Рµ СЂРѕР»Р»Р°
-     * @return РЎРѕС…СЂР°РЅРµРЅРЅС‹Р№ СЂРѕР»Р» РІ С‚РµР»Рµ РѕС‚РІРµС‚Р°
-     */
-    @PostMapping("/{menuId}/rolls")
-    public ResponseEntity<RollMenuItem> addRollsToMenu(
-            @PathVariable Long menuId,
-            @RequestBody RollMenuItem roll) {
-        RollMenuItem savedRoll;
-        try {
-            savedRoll = (RollMenuItem) menuService.addItemToMenu(menuId, roll);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new RollMenuItem());
-        }
-        return new ResponseEntity<>(savedRoll, HttpStatus.CREATED);
-    }
+            <!-- Список меню -->
+            <div class="list-group">
+                <a th:each="menu : ${menus}"
+                   th:href="@{/menu(mid=${menu.id})}"
+                   class="list-group-item list-group-item-action">
+                    <h5 th:text="${menu.name}"></h5>
+                    <p class="text-muted" th:text="${menu.description}"></p>
+                    <small class="text-muted" th:text="${menu.address}"></small>
+                </a>
+            </div>
 
-    /**
-     * РџРѕР»СѓС‡Р°РµС‚ СЌР»РµРјРµРЅС‚С‹ РјРµРЅСЋ РїРѕ ID.
-     *
-     * @param menuId ID РјРµРЅСЋ
-     * @return РЎРїРёСЃРѕРє СЌР»РµРјРµРЅС‚РѕРІ РјРµРЅСЋ РІ С‚РµР»Рµ РѕС‚РІРµС‚Р°
-     */
-    @GetMapping("/{menuId}/items")
-    public ResponseEntity<List<MenuItem>> getMenuItems(@PathVariable Long menuId) {
-        try {
-            Menu menuById = menuService.getMenuById(menuId);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ArrayList<>());
-        }
-        return ResponseEntity.ok(menuService.getMenuItems(menuId));
-    }
+            <!-- Ссылка на страницу меню -->
+            <div class="text-center mt-4">
+                <a href="/menu" class="btn btn-outline-primary">
+                    Посмотреть меню →-->
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 
-    /**
-     * РџРѕР»СѓС‡Р°РµС‚ РІСЃРµ РјРµРЅСЋ.
-     *
-     * @return РЎРїРёСЃРѕРє РІСЃРµС… РјРµРЅСЋ РІ С‚РµР»Рµ РѕС‚РІРµС‚Р°
-     */
-    @GetMapping
-    public ResponseEntity<List<Menu>> getAllMenus() {
-        return new ResponseEntity<>(menuService.getAllMenus(), HttpStatus.OK);
-    }
-}
-
-================================================================================
-Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\controllers\OrderController.java
-================================================================================
-
-package com.example.diplom.controllers;
+<!-- Подключение Bootstrap JS и Popper.js -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
 
 
-//import com.example.diplom.cases.AddProductToOrderUseCase;
-import com.example.diplom.dto.OrderResponse;
-import com.example.diplom.model.Order;
+menu.html
 
-import com.example.diplom.service.OrderService;
-import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <title>Меню</title>
+</head>
+<body class="bg-light">
+<!-- Блок авторизации -->
+<div class="auth-section" style="position: absolute; top: 20px; left: 20px; z-index: 1000;">
+        <div th:if="${#authorization.expression('isAuthenticated()')}">
+            <form th:action="@{/logout}" method="post">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    Выйти ([[${#authentication.principal.username}]])
+                </button>
+            </form>
+        </div>
+        <div th:unless="${#authorization.expression('isAuthenticated()')}">
+            <form th:action="@{/login}" method="post" class="d-flex gap-2">
+                <input type="text" name="username" placeholder="Логин" class="form-control form-control-sm">
+                <input type="password" name="password" placeholder="Пароль" class="form-control form-control-sm">
+                <button type="submit" class="btn btn-primary btn-sm">Войти</button>
+            </form>
+            <div th:if="${param.error}" class="text-danger mt-1">Ошибка авторизации!</div>
+        </div>
+</div>
+<!-- Иконка корзины -->
+<div class="cart-icon-wrapper">
+    <button class="btn btn-primary cart-icon" onclick="toggleCart()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-cart" viewBox="0 0 16 16">
+            <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5M3.102 4l1.313 7h8.17l1.313-7zM5 14a1 1 0 1 1 0 2 1 1 0 0 1 0-2m5 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2m-5 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2m5 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/>
+        </svg>
+        <span class="badge bg-danger" id="cart-counter" th:text="${session.cart != null ? #lists.size(session.cart) : 0}">0</span>
+    </button>
+</div>
 
-import java.util.List;
+<!-- Боковая панель корзины -->
+<div class="cart-sidebar" id="cart-sidebar">
+    <div class="cart-header">
+        <h4>Ваша корзина</h4>
+        <button class="btn btn-close" onclick="toggleCart()"></button>
+    </div>
+    <div class="cart-body">
+        <!-- Уведомления -->
+        <div th:if="${success}" class="alert alert-success">
+            [[${success}]]
+        </div>
+        <div th:if="${error}" class="alert alert-danger">
+            [[${error}]]
+        </div>
 
-/**
- * REST-РєРѕРЅС‚СЂРѕР»Р»РµСЂ РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ Р·Р°РєР°Р·Р°РјРё.
- */
-@Slf4j
-@AllArgsConstructor
-@RestController
-@RequestMapping("/orders")
-class OrderController {
-    private final OrderService orderService;
+        <!-- Содержимое корзины -->
+        <div th:replace="~{fragments/cart-content :: cart-content(total=${total})}"></div>
+    </div>
+</div>
 
-    /**
-     * РЎРѕР·РґР°РµС‚ РЅРѕРІС‹Р№ Р·Р°РєР°Р·.
-     *
-     * @param order РћР±СЉРµРєС‚ Р·Р°РєР°Р·Р° РґР»СЏ СЃРѕР·РґР°РЅРёСЏ
-     * @return РЎРѕР·РґР°РЅРЅС‹Р№ Р·Р°РєР°Р· РІ С‚РµР»Рµ РѕС‚РІРµС‚Р°
-     */
-    @PostMapping
-    public ResponseEntity<Order> createOrder(@RequestBody Order order) {
-        return new ResponseEntity<>(orderService.createOrder(order), HttpStatus.CREATED);
-    }
+<div class="container mt-5" style="padding-top: 120px;">
+    <div class="card shadow">
+        <div class="card-body">
+            <h1 class="text-center mb-4 text-primary">Наше меню</h1>
 
-    /**
-     * РџРѕР»СѓС‡Р°РµС‚ Р·Р°РєР°Р· РїРѕ ID СЃ РѕР±С‰РµР№ СЃСѓРјРјРѕР№.
-     *
-     * @param id ID Р·Р°РєР°Р·Р°
-     * @return Р—Р°РєР°Р· СЃ РѕР±С‰РµР№ СЃСѓРјРјРѕР№ РІ DTO
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<OrderResponse> getOrder(@PathVariable Long id) {
-        Order orderById;
-        try {
-            orderById = orderService.getOrderById(id);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new OrderResponse());
-        }
-        double total = orderService.calculateOrderTotal(id);
-        OrderResponse response = orderService.orderToOrderResponse(orderById, total);
-        return new ResponseEntity<>(response, HttpStatus.OK);
-    }
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                <div class="col" th:each="menuItem : ${menuItems}">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title" th:text="${menuItem.name}"></h5>
+                            <p class="card-text text-muted" th:text="${menuItem.description}"></p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-success" th:text="'₽' + ${#numbers.formatDecimal(menuItem.price, 1, 2)}"></span>
+                                <span th:if="${menuItem instanceof T(com.example.diplom.model.PizzaMenuItem)}"
+                                      class="badge bg-info"
+                                      th:text="'Диаметр: ' + ${menuItem.diameter} + 'см'">
+                                    </span>
+                                <span th:if="${menuItem instanceof T(com.example.diplom.model.RollMenuItem)}"
+                                      class="badge bg-warning"
+                                      th:text="'Кусочков: ' + ${menuItem.pieceCount}">
+                                    </span>
+                            </div>
+                            <!-- Кнопка "В корзину" -->
+                            <form th:action="@{/cart/add}" method="post">
+                                <input type="hidden" name="menuItemId" th:value="${menuItem.id}">
+                                <input type="hidden" name="menuId" th:value="${menuItem.menu.id}">
+                                <button type="submit" class="btn btn-primary w-100">В корзину</button>
+                            </form>
+                            <!-- Форма удаления товара из корзины -->
+                            <!-- Проверяем, есть ли товар в корзине -->
+                            <div th:if="${#lists.contains(session.cart.![id], menuItem.id)}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <form th:action="@{/cart/remove}" method="post">
+                                        <input type="hidden" name="menuItemId" th:value="${menuItem.id}">
+                                        <input type="hidden" name="menuId" th:value="${menuItem.menu.id}">
+                                        <button type="submit" class="btn btn-danger btn-sm">
+                                            Удалить из корзины
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    /**
-     * РџРѕР»СѓС‡Р°РµС‚ РІСЃРµ Р·Р°РєР°Р·С‹ СЃ СЃСѓРјРјР°РјРё.
-     *
-     * @return РЎРїРёСЃРѕРє Р·Р°РєР°Р·РѕРІ СЃ СЃСѓРјРјР°РјРё РІ С‚РµР»Рµ РѕС‚РІРµС‚Р°
-     */
-    @GetMapping
-    public ResponseEntity<List<OrderResponse>> getAllOrders() {
-        return new ResponseEntity<>(orderService.getAllOrdersWithTotals(), HttpStatus.OK);
-    }
+            <div class="text-center mt-4">
+                <a href="/" class="btn btn-outline-primary">
+                    ← На главную
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 
-    /**
-     * РЈРґР°Р»СЏРµС‚ Р·Р°РєР°Р· РїРѕ ID.
-     *
-     * @param id ID Р·Р°РєР°Р·Р°
-     * @return РџСѓСЃС‚РѕР№ РѕС‚РІРµС‚ РїСЂРё СѓСЃРїРµС…Рµ
-     */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
-        orderService.deleteOrder(id);
-        return ResponseEntity.ok().build();
-    }
+<!-- Подключение Bootstrap JS и Popper.js -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-    /**
-     * РћР±РЅРѕРІР»СЏРµС‚ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ Р·Р°РєР°Р·.
-     *
-     * @param id    ID Р·Р°РєР°Р·Р°
-     * @param order РћР±РЅРѕРІР»РµРЅРЅС‹Рµ РґР°РЅРЅС‹Рµ Р·Р°РєР°Р·Р°
-     * @return РћР±РЅРѕРІР»РµРЅРЅС‹Р№ Р·Р°РєР°Р· РІ С‚РµР»Рµ РѕС‚РІРµС‚Р°
-     */
-    @PutMapping("/{id}")
-    public ResponseEntity<Order> updateOrder(@PathVariable Long id, @RequestBody Order order) {
-        try {
-            return new ResponseEntity<>(orderService.updateOrder(order), HttpStatus.OK);
-        } catch (RuntimeException e) {
-            log.warn("Р—Р°РєР°Р· СЃ С‚Р°РєРёРј Id РЅРµ РЅР°Р№РґРµРЅ");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Order());
-        }
-    }
+<!-- Скрипт для корзины -->
+<script>
+    function toggleCart() {
+        const sidebar = document.getElementById('cart-sidebar');
+        sidebar.classList.toggle('active');
 
-    /**
-     * Р”РѕР±Р°РІР»СЏРµС‚ РїСЂРѕРґСѓРєС‚ РёР· РјРµРЅСЋ РІ Р·Р°РєР°Р·.
-     *
-     * @param orderId      ID Р·Р°РєР°Р·Р°
-     * @param menuItemId ID СЌР»РµРјРµРЅС‚Р° РјРµРЅСЋ
-     * @return РћР±РЅРѕРІР»РµРЅРЅС‹Р№ Р·Р°РєР°Р· РІ С‚РµР»Рµ РѕС‚РІРµС‚Р°
-     */
-    @PostMapping("/{orderId}/menu-items/{menuItemId}")
-    public ResponseEntity<Order> addProductFromMenu(
-            @PathVariable Long orderId,
-            @PathVariable Long menuItemId) {
-        try {
-            Order updatedOrder = orderService.addProductFromMenu(orderId, menuItemId);
-            return new ResponseEntity<>(updatedOrder, HttpStatus.OK);
-        } catch (RuntimeException e) {
-            log.warn("РћС€РёР±РєР° РїСЂРё РґРѕР±Р°РІР»РµРЅРёРё РїСЂРѕРґСѓРєС‚Р° РІ Р·Р°РєР°Р·: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Order());
-        }
-    }
+        // Добавляем затемнение фона
+        const overlay = document.createElement('div');
+        overlay.className = 'cart-overlay';
+        overlay.onclick = toggleCart;
 
-    /**
-     * РћС‚РѕР±СЂР°Р¶Р°РµС‚ СЃРїРёСЃРѕРє Р·Р°РєР°Р·РѕРІ.
-     *
-     * @param model РњРѕРґРµР»СЊ РґР»СЏ РїРµСЂРµРґР°С‡Рё СЃРїРёСЃРєР° Р·Р°РєР°Р·РѕРІ
-     * @return РЁР°Р±Р»РѕРЅ СЃРїРёСЃРєР° Р·Р°РєР°Р·РѕРІ (orders.html)
-     */
-    @GetMapping("/view")
-    public String viewOrders(Model model) {
-        model.addAttribute("orders", orderService.getAllOrdersWithTotals());
-        return "orders";
-    }
-
-    /**
-     * Р”РѕР±Р°РІР»СЏРµС‚ С‚РѕРІР°СЂ РІ С‚РµРєСѓС‰РёР№ Р·Р°РєР°Р· (СѓРїСЂРѕС‰РµРЅРЅР°СЏ РІРµСЂСЃРёСЏ).
-     *
-     * @param menuItemId ID СЌР»РµРјРµРЅС‚Р° РјРµРЅСЋ
-     * @param attributes РђС‚СЂРёР±СѓС‚С‹ РґР»СЏ СЃРѕРѕР±С‰РµРЅРёР№
-     * @return Р РµРґРёСЂРµРєС‚ РЅР° РјРµРЅСЋ СЃ СѓРІРµРґРѕРјР»РµРЅРёРµРј
-     */
-    @PostMapping("/add")
-    public String addToOrder(
-            @RequestParam Long menuItemId,
-            RedirectAttributes attributes) {
-        try {
-            Order order = orderService.createOrder(new Order());
-            orderService.addProductFromMenu(order.getId(), menuItemId);
-            attributes.addFlashAttribute("success", "Р‘Р»СЋРґРѕ РґРѕР±Р°РІР»РµРЅРѕ РІ Р·Р°РєР°Р·!");
-        } catch (Exception e) {
-            attributes.addFlashAttribute("error", "РћС€РёР±РєР°: " + e.getMessage());
-        }
-        return "redirect:/menu";
-    }
-}
-
-================================================================================
-Файл: D:\обучение\Diplom\diplom\src\main\java\com\example\diplom\controllers\ProductsController.java
-================================================================================
-
-package com.example.diplom.controllers;
-
-import com.example.diplom.dto.ProductDTO;
-import com.example.diplom.model.*;
-import com.example.diplom.service.ProductService;
-import lombok.AllArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-
-// ProductsController.java
-/**
- * REST-РєРѕРЅС‚СЂРѕР»Р»РµСЂ РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ РїСЂРѕРґСѓРєС‚Р°РјРё.
- */
-@RestController
-@AllArgsConstructor
-@RequestMapping("/products")
-public class ProductsController {
-    private final ProductService productService;
-
-    /**
-     * РЎРѕР·РґР°РµС‚ РЅРѕРІС‹Р№ РїСЂРѕРґСѓРєС‚ РЅР° РѕСЃРЅРѕРІРµ DTO.
-     *
-     * @param productDTO DTO СЃ РґР°РЅРЅС‹РјРё РїСЂРѕРґСѓРєС‚Р°
-     * @return РЎРѕР·РґР°РЅРЅС‹Р№ РїСЂРѕРґСѓРєС‚ РІ С‚РµР»Рµ РѕС‚РІРµС‚Р°
-     */
-    @PostMapping
-    public ResponseEntity<Product> createProduct(@RequestBody ProductDTO productDTO) {
-        Product product;
-        if ("PIZZA".equals(productDTO.getDtype())) {
-            product = new Pizza(productDTO.getName(), productDTO.getDescription(), productDTO.getPrice(), productDTO.getDiameter());
-        } else if ("ROLL".equals(productDTO.getDtype())) {
-            product = new RollDish(productDTO.getName(), productDTO.getDescription(), productDTO.getPrice(), productDTO.getPieceCount());
+        if(sidebar.classList.contains('active')) {
+            document.body.appendChild(overlay);
         } else {
-            throw new IllegalArgumentException("РќРµРёР·РІРµСЃС‚РЅС‹Р№ С‚РёРї РїСЂРѕРґСѓРєС‚Р°");
+            document.querySelector('.cart-overlay')?.remove();
         }
-        Product createdProduct = productService.createProduct(product);
-        return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
     }
+</script>
+</body>
+</html>
 
-    /**
-     * РџРѕР»СѓС‡Р°РµС‚ РїСЂРѕРґСѓРєС‚ РїРѕ ID.
-     *
-     * @param id ID РїСЂРѕРґСѓРєС‚Р°
-     * @return РџСЂРѕРґСѓРєС‚ РІ С‚РµР»Рµ РѕС‚РІРµС‚Р°
-     */
-    @GetMapping("/{id}")
-    public ResponseEntity<Product> getProduct(@PathVariable Long id) {
-        Product productById;
-        try {
-            productById = (Product) productService.getProductById(id);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Pizza());
-        }
-        return new ResponseEntity<>(productById, HttpStatus.OK);
-    }
+cart-content.html
 
-    /**
-     * РџРѕР»СѓС‡Р°РµС‚ РІСЃРµ РїСЂРѕРґСѓРєС‚С‹.
-     *
-     * @return РЎРїРёСЃРѕРє РІСЃРµС… РїСЂРѕРґСѓРєС‚РѕРІ РІ С‚РµР»Рµ РѕС‚РІРµС‚Р°
-     */
-    @GetMapping
-    public ResponseEntity<List<Product>> getAllProducts() {
-        return new ResponseEntity<>(productService.getAllProducts(), HttpStatus.OK);
-    }
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="cart-content(total)">
+    <div th:if="${not #lists.isEmpty(session.cart)}">
+        <div class="cart-item mb-3" th:each="item : ${session.cart}">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="me-3">
+                    <h5 th:text="${item.name}"></h5>
+                    <small class="text-muted" th:text="${item.description}"></small>
+                </div>
+                <div class="text-end">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-primary" th:text="'₽' + ${#numbers.formatDecimal(item.price, 1, 2)}"></span>
+                        <form th:action="@{/cart/remove}" method="post">
+                            <input type="hidden" name="menuItemId" th:value="${item.id}">
+                            <button type="submit" class="btn btn-danger btn-sm">
+                                &times;
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    /**
-     * РЈРґР°Р»СЏРµС‚ РїСЂРѕРґСѓРєС‚ РїРѕ ID.
-     *
-     * @param id ID РїСЂРѕРґСѓРєС‚Р°
-     * @return РџСѓСЃС‚РѕР№ РѕС‚РІРµС‚ РїСЂРё СѓСЃРїРµС…Рµ
-     */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
-        Product productById;
-        try {
-            productById = productService.getProductById(id);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
-        productService.deleteProduct(productById.getId());
-        return ResponseEntity.ok().build();
-    }
+        <div class="total-price py-3 border-top">
+            <h5 class="d-flex justify-content-between">
+                <span>Итого:</span>
+                <span th:text="'₽' + ${total != null ? #numbers.formatDecimal(total, 1, 2) : '0.00'}"></span>
+            </h5>
+        </div>
 
-    /**
-     * РћР±РЅРѕРІР»СЏРµС‚ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ РїСЂРѕРґСѓРєС‚.
-     *
-     * @param id          ID РїСЂРѕРґСѓРєС‚Р°
-     * @param productDTO DTO СЃ РѕР±РЅРѕРІР»РµРЅРЅС‹РјРё РґР°РЅРЅС‹РјРё
-     * @return РћР±РЅРѕРІР»РµРЅРЅС‹Р№ РїСЂРѕРґСѓРєС‚ РІ С‚РµР»Рµ РѕС‚РІРµС‚Р°
-     */
-    @PutMapping("/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody ProductDTO productDTO) {
-        Product productById;
-        try {
-            productById = productService.getProductById(id);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Pizza());
-        }
-        if (productDTO.getName() != null) {
-            productById.setName(productDTO.getName());
-        }
-        if (productDTO.getDescription() != null) {
-            productById.setDescription(productDTO.getDescription());
-        }
-        if (productDTO.getPrice() != 0) {
-            productById.setPrice(productDTO.getPrice());
-        }
-        if (productDTO.getProductStatus() != null) {
-            productById.setProductStatus(productDTO.getProductStatus());
-        }
-        if (productById instanceof Pizza && productDTO.getDiameter() != 0) {
-            ((Pizza) productById).setDiameter(productDTO.getDiameter());
-        }
-        Product updatedProduct = productService.updateProduct(productById);
-        return new ResponseEntity<>(updatedProduct, HttpStatus.OK);
-    }
-}
+        <form th:action="@{/cart/checkout}" method="post">
+            <button type="submit" class="btn btn-success w-100">
+                Оформить заказ
+            </button>
+        </form>
+    </div>
+</div>
+</body>
+</html>
+
+
+orders.html
+
+<!DOCTYPE html>
+        <html xmlns:th="http://www.thymeleaf.org">
+        <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <!-- Подключение Bootstrap CSS -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+        <!-- Подключение собственных стилей -->
+        <link rel="stylesheet" th:href="@{/css/styles.css}">
+
+        <title>Мои заказы</title>
+</head>
+<body class="bg-light">
+<!-- Блок авторизации -->
+<div class="auth-section" style="position: absolute; top: 20px; left: 20px;">
+    <div th:if="${#authorization.expression('isAuthenticated()')}">
+        <form th:action="@{/logout}" method="post">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+                Выйти ([[${#authentication.principal.username}]])
+            </button>
+        </form>
+    </div>
+    <div th:unless="${#authorization.expression('isAuthenticated()')}">
+        <form th:action="@{/login}" method="post" class="d-flex gap-2">
+            <input type="text" name="username" placeholder="Логин" class="form-control form-control-sm">
+            <input type="password" name="password" placeholder="Пароль" class="form-control form-control-sm">
+            <button type="submit" class="btn btn-primary btn-sm">Войти</button>
+        </form>
+        <div th:if="${param.error}" class="text-danger mt-1">Ошибка авторизации!</div>
+    </div>
+</div>
+<!-- Основной контейнер -->
+<div class="container mt-5 " style="padding-top: 120px;">
+    <div class="card shadow">
+        <div class="card-body">
+            <h1 class="text-center mb-4 text-primary">Мои заказы</h1>
+
+            <!-- Список заказов -->
+            <div th:each="order : ${orders}">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            Заказ #<span th:text="${order.id}"></span>
+                            <span class="badge bg-secondary" th:text="${order.status}"></span>
+                        </h5>
+                        <p class="card-text">
+                            <strong>Ресторан:</strong>
+                            <span th:text="${order.restaurantName}"></span>
+                            (<span th:text="${order.restaurantAddress}"></span>)
+                        </p>
+                        <p class="card-text">
+                            <strong>Сумма:</strong>
+                            <span th:text="${order.total}"></span> ₽
+                        </p>
+                        <ul class="list-group">
+                            <li class="list-group-item" th:each="product : ${order.products}">
+                                <span th:text="${product.name}"></span> -
+                                <span th:text="${product.description}"></span> -
+<!--                                <span th:text="${product.price}"></span> ₽-->
+                                <span th:text="${#numbers.formatDecimal(product.price, 1, 2)}"></span> ₽
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="/menu" class="btn btn-outline-primary">
+                    ← Вернуться в меню
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Подключение Bootstrap JS и Popper.js -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
 
 
