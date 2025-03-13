@@ -225,4 +225,18 @@ public class OrderService {
                 })
                 .collect(Collectors.toList());
     }
+
+    @Transactional
+    public void updateOrderAndProductStatus(Long orderId, Long productId, ProductStatus newStatus) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Заказ не найден"));
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Продукт не найден"));
+
+        product.setProductStatus(newStatus);
+        productRepository.save(product);
+
+        order.updateOrderStatus();
+        orderRepository.save(order);
+    }
 }

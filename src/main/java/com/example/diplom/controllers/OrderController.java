@@ -5,7 +5,10 @@ package com.example.diplom.controllers;
 import com.example.diplom.dto.OrderResponse;
 import com.example.diplom.model.Order;
 
+import com.example.diplom.model.Product;
+import com.example.diplom.model.ProductStatus;
 import com.example.diplom.service.OrderService;
+import com.example.diplom.service.ProductService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -14,7 +17,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * REST-контроллер для управления заказами.
@@ -25,6 +30,7 @@ import java.util.List;
 @RequestMapping("/orders")
 class OrderController {
     private final OrderService orderService;
+    private final ProductService productService;
 
     /**
      * Создает новый заказ.
@@ -147,4 +153,22 @@ class OrderController {
         }
         return "redirect:/menu";
     }
+
+    @PostMapping("/{orderId}/products/{productId}/status")
+    public ResponseEntity<Map<String, Object>> updateProductStatus(
+            @PathVariable Long orderId,
+            @PathVariable Long productId,
+            @RequestBody Map<String, String> request) {
+        ProductStatus newStatus = ProductStatus.valueOf(request.get("status"));
+        orderService.updateOrderAndProductStatus(orderId, productId, newStatus);
+        Product updatedProduct=productService.getProductById(productId);
+        Order order = orderService.getOrderById(orderId);
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("orderStatus", order.getStatus().name());
+        response.put("productStatus", updatedProduct.getProductStatus().name());
+        return ResponseEntity.ok(response);
+    }
+
+
 }

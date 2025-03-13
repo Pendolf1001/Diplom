@@ -33,7 +33,7 @@ public class SecurityConfig {
                                 "/menu", "/cart/add", "/cart/remove", "/cart/checkout")
                         .permitAll()
                         // Доступ для сотрудников и администраторов
-                        .requestMatchers("/cart/all")
+                        .requestMatchers("/cart/all", "/orders/{orderId}/products/{productId}/status")
                         .hasAnyRole("STAFF", "ADMIN")
                         // Все остальные запросы требуют роли ADMIN
                         .anyRequest()

@@ -68,7 +68,7 @@ public class Order {
     }
 
 
-    private void updateOrderStatus() {
+    public void updateOrderStatus() {
         boolean allReady = products.stream().allMatch(p -> p.getProductStatus() == ProductStatus.READY);
         boolean anyInProgress = products.stream().anyMatch(p -> p.getProductStatus() == ProductStatus.IN_PROGRESS);
 
